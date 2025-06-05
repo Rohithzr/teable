@@ -135,11 +135,13 @@ export const EditorContainerBase: ForwardRefRenderFunction<
     if (selection.type === SelectionRegionType.None) return;
     const focusTarget = editorRef.current || defaultFocusRef.current;
     if (!focusTarget) return;
-    if (focusTarget === defaultFocusRef.current) {
-      defaultFocusRef.current.value = ' ';
-      defaultFocusRef.current.select();
-    }
-    focusTarget.focus?.();
+    requestAnimationFrame(() => {
+      if (focusTarget === defaultFocusRef.current) {
+        defaultFocusRef.current.value = " ";
+        defaultFocusRef.current.select();
+      }
+      focusTarget.focus?.();
+    });
   }, [selection, isEditing]);
 
   useKeyboardSelection({
