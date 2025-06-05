@@ -134,7 +134,15 @@ export const EditorContainerBase: ForwardRefRenderFunction<
   useEffect(() => {
     if ((cellType as CellType) === CellType.Loading) return;
     if (selection.type === SelectionRegionType.None) return;
-    requestAnimationFrame(() => (editorRef.current || defaultFocusRef.current)?.focus?.());
+    requestAnimationFrame(() => {
+      const focusTarget = editorRef.current || defaultFocusRef.current;
+      if (!focusTarget) return;
+      if (focusTarget === defaultFocusRef.current) {
+        defaultFocusRef.current.value = ' ';
+        defaultFocusRef.current.select();
+      }
+      focusTarget.focus?.();
+    });
   }, [cellType, activeCell, selection, isEditing]);
 
   useKeyboardSelection({
