@@ -131,17 +131,15 @@ export const EditorContainerBase: ForwardRefRenderFunction<
     editorRef.current?.setValue?.(cellContent.data);
   }, [cellContent, activeCell, isEditing]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (selection.type === SelectionRegionType.None) return;
-    requestAnimationFrame(() => {
-      const focusTarget = editorRef.current || defaultFocusRef.current;
-      if (!focusTarget) return;
-      if (focusTarget === defaultFocusRef.current) {
-        defaultFocusRef.current.value = ' ';
-        defaultFocusRef.current.select();
-      }
-      focusTarget.focus?.();
-    });
+    const focusTarget = editorRef.current || defaultFocusRef.current;
+    if (!focusTarget) return;
+    if (focusTarget === defaultFocusRef.current) {
+      defaultFocusRef.current.value = ' ';
+      defaultFocusRef.current.select();
+    }
+    focusTarget.focus?.();
   }, [selection, isEditing]);
 
   useKeyboardSelection({
