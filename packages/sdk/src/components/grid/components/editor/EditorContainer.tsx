@@ -132,7 +132,6 @@ export const EditorContainerBase: ForwardRefRenderFunction<
   }, [cellContent, activeCell, isEditing]);
 
   useEffect(() => {
-    if ((cellType as CellType) === CellType.Loading) return;
     if (selection.type === SelectionRegionType.None) return;
     requestAnimationFrame(() => {
       const focusTarget = editorRef.current || defaultFocusRef.current;
@@ -143,7 +142,7 @@ export const EditorContainerBase: ForwardRefRenderFunction<
       }
       focusTarget.focus?.();
     });
-  }, [cellType, activeCell, selection, isEditing]);
+  }, [selection, isEditing]);
 
   useKeyboardSelection({
     editorRef,
@@ -321,7 +320,7 @@ export const EditorContainerBase: ForwardRefRenderFunction<
         onCopy={onCopyInner}
       >
         {EditorRenderer}
-        <input className="opacity-0" ref={defaultFocusRef} />
+        <input className="size-0 opacity-0" ref={defaultFocusRef} />
       </div>
     </div>
   );
