@@ -29,37 +29,19 @@ export const rangeTypes = {
 export const isSafari = () => /^(?:(?!chrome|android).)*safari/i.test(navigator.userAgent);
 
 export const copyHandler = async (getCopyData: () => Promise<ICopyVo>) => {
-  // Can't await asynchronous action before navigator.clipboard.write in safari
-  if (!isSafari()) {
-    const { header, content } = await getCopyData();
-    await navigator.clipboard.write([
-      new ClipboardItem({
-        [ClipboardTypes.text]: new Blob([content], { type: ClipboardTypes.text }),
-        [ClipboardTypes.html]: new Blob([serializerHtml(content, header)], {
-          type: ClipboardTypes.html,
-        }),
-      }),
-    ]);
-    return;
-  }
+  // Don't await any async action before calling navigator.clipboard.write, or we lose the user activation
+  const dataPromise = getCopyData();
 
-  const getText = async () => {
-    const { content } = await getCopyData();
+  const clipboardItem = new ClipboardItem({
+    [ClipboardTypes.text]: dataPromise.then(({ content }) =>
+      new Blob([content], { type: ClipboardTypes.text })
+    ),
+    [ClipboardTypes.html]: dataPromise.then(({ header, content }) =>
+      new Blob([serializerHtml(content, header)], { type: ClipboardTypes.html })
+    ),
+  });
 
-    return new Blob([content], { type: ClipboardTypes.text });
-  };
-
-  const getHtml = async () => {
-    const { header, content } = await getCopyData();
-    return new Blob([serializerHtml(content, header)], { type: ClipboardTypes.html });
-  };
-
-  await navigator.clipboard.write([
-    new ClipboardItem({
-      [ClipboardTypes.text]: getText(),
-      [ClipboardTypes.html]: getHtml(),
-    }),
-  ]);
+  await navigator.clipboard.write([clipboardItem]);
 };
 
 export const filePasteHandler = async ({
