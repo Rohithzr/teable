@@ -29,19 +29,30 @@ export const rangeTypes = {
 export const isSafari = () => /^(?:(?!chrome|android).)*safari/i.test(navigator.userAgent);
 
 export const copyHandler = async (getCopyData: () => Promise<ICopyVo>) => {
-  // Don't await any async action before calling navigator.clipboard.write, or we lose the user activation
-  const dataPromise = getCopyData();
+  // Don't await any async action before calling navigator.clipboard.write
+  // Use a lazy promise so Safari keeps user activation
+  let dataPromise: Promise<ICopyVo> | null = null;
+  const getData = () => {
+    if (!dataPromise) dataPromise = getCopyData();
+    return dataPromise;
+  };
 
   const clipboardItem = new ClipboardItem({
-    [ClipboardTypes.text]: dataPromise.then(({ content }) =>
+    [ClipboardTypes.text]: getData().then(({ content }) =>
       new Blob([content], { type: ClipboardTypes.text })
     ),
-    [ClipboardTypes.html]: dataPromise.then(({ header, content }) =>
+    [ClipboardTypes.html]: getData().then(({ header, content }) =>
       new Blob([serializerHtml(content, header)], { type: ClipboardTypes.html })
     ),
   });
 
-  await navigator.clipboard.write([clipboardItem]);
+  try {
+    await navigator.clipboard.write([clipboardItem]);
+  } catch (err) {
+    // Safari may reject ClipboardItem writes; fall back to plain text
+    const { content } = await getData();
+    await navigator.clipboard.writeText(content);
+  }
 };
 
 export const filePasteHandler = async ({
