@@ -133,7 +133,7 @@ export const EditorContainerBase: ForwardRefRenderFunction<
 
   useEffect(() => {
     if ((cellType as CellType) === CellType.Loading) return;
-    if (!activeCell || selection.type === SelectionRegionType.None) return;
+    if (selection.type === SelectionRegionType.None) return;
     requestAnimationFrame(() => (editorRef.current || defaultFocusRef.current)?.focus?.());
   }, [cellType, activeCell, selection, isEditing]);
 
