@@ -131,11 +131,18 @@ export const EditorContainerBase: ForwardRefRenderFunction<
     editorRef.current?.setValue?.(cellContent.data);
   }, [cellContent, activeCell, isEditing]);
 
-  useEffect(() => {
-    if ((cellType as CellType) === CellType.Loading) return;
-    if (!activeCell || selection.type === SelectionRegionType.None) return;
-    requestAnimationFrame(() => (editorRef.current || defaultFocusRef.current)?.focus?.());
-  }, [cellType, activeCell, selection, isEditing]);
+  useLayoutEffect(() => {
+    if (selection.type === SelectionRegionType.None) return;
+    const focusTarget = editorRef.current || defaultFocusRef.current;
+    if (!focusTarget) return;
+    requestAnimationFrame(() => {
+      if (focusTarget === defaultFocusRef.current) {
+        defaultFocusRef.current.value = " ";
+        defaultFocusRef.current.select();
+      }
+      focusTarget.focus?.();
+    });
+  }, [selection, isEditing]);
 
   useKeyboardSelection({
     editorRef,
@@ -291,7 +298,7 @@ export const EditorContainerBase: ForwardRefRenderFunction<
   };
 
   const onCopyInner = (e: React.ClipboardEvent) => {
-    if (!activeCell || isEditing) return;
+    if (isEditing || selection.isNoneSelection) return;
     onCopy?.(selection, e);
   };
 
@@ -313,7 +320,7 @@ export const EditorContainerBase: ForwardRefRenderFunction<
         onCopy={onCopyInner}
       >
         {EditorRenderer}
-        <input className="opacity-0" ref={defaultFocusRef} />
+        <input className="size-0 opacity-0" ref={defaultFocusRef} />
       </div>
     </div>
   );

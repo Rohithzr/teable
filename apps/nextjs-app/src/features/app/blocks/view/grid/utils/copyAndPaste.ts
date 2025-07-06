@@ -29,37 +29,30 @@ export const rangeTypes = {
 export const isSafari = () => /^(?:(?!chrome|android).)*safari/i.test(navigator.userAgent);
 
 export const copyHandler = async (getCopyData: () => Promise<ICopyVo>) => {
-  // Can't await asynchronous action before navigator.clipboard.write in safari
-  if (!isSafari()) {
-    const { header, content } = await getCopyData();
-    await navigator.clipboard.write([
-      new ClipboardItem({
-        [ClipboardTypes.text]: new Blob([content], { type: ClipboardTypes.text }),
-        [ClipboardTypes.html]: new Blob([serializerHtml(content, header)], {
-          type: ClipboardTypes.html,
-        }),
-      }),
-    ]);
-    return;
+  // Don't await any async action before calling navigator.clipboard.write
+  // Use a lazy promise so Safari keeps user activation
+  let dataPromise: Promise<ICopyVo> | null = null;
+  const getData = () => {
+    if (!dataPromise) dataPromise = getCopyData();
+    return dataPromise;
+  };
+
+  const clipboardItem = new ClipboardItem({
+    [ClipboardTypes.text]: getData().then(({ content }) =>
+      new Blob([content], { type: ClipboardTypes.text })
+    ),
+    [ClipboardTypes.html]: getData().then(({ header, content }) =>
+      new Blob([serializerHtml(content, header)], { type: ClipboardTypes.html })
+    ),
+  });
+
+  try {
+    await navigator.clipboard.write([clipboardItem]);
+  } catch (err) {
+    // Safari may reject ClipboardItem writes; fall back to plain text
+    const { content } = await getData();
+    await navigator.clipboard.writeText(content);
   }
-
-  const getText = async () => {
-    const { content } = await getCopyData();
-
-    return new Blob([content], { type: ClipboardTypes.text });
-  };
-
-  const getHtml = async () => {
-    const { header, content } = await getCopyData();
-    return new Blob([serializerHtml(content, header)], { type: ClipboardTypes.html });
-  };
-
-  await navigator.clipboard.write([
-    new ClipboardItem({
-      [ClipboardTypes.text]: getText(),
-      [ClipboardTypes.html]: getHtml(),
-    }),
-  ]);
 };
 
 export const filePasteHandler = async ({
