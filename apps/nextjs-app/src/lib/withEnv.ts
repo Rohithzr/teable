@@ -31,6 +31,7 @@ export default function withEnv<P extends { [key: string]: any }>(
         socialAuthProviders: process.env.SOCIAL_AUTH_PROVIDERS?.split(','),
         storagePrefix: process.env.STORAGE_PREFIX,
         passwordLoginDisabled: process.env.PASSWORD_LOGIN_DISABLED === 'true' ? true : undefined,
+        hideBranding: process.env.HIDE_BRANDING === 'true' ? true : undefined,
         maxSearchFieldCount: process.env.MAX_SEARCH_FIELD_COUNT
           ? toNumber(process.env.MAX_SEARCH_FIELD_COUNT) === Infinity
             ? // Infinity has been transformed to null unexpectedly
