@@ -2,6 +2,7 @@ name: Cleanup Preview Environment
 
 on:
   pull_request:
+    branches: [f-v1.18]
     types: [closed]
 
 env:
@@ -53,3 +54,4 @@ jobs:
               issue_number: prNumber,
               body: commentBody
             });
+
