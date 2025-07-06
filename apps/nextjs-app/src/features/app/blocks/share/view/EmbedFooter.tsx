@@ -19,9 +19,9 @@ export const EmbedFooter = ({
 }) => {
   const router = useRouter();
   const { t } = useTranslation(shareConfig.i18nNamespaces);
-  const { tableId, viewId, shareId } = useContext(ShareViewContext);
+  const { viewId, shareId } = useContext(ShareViewContext);
   const { trigger: downloadCsv } = useDownload({
-    downloadUrl: `/api/export/${tableId}?viewId=${viewId}&shareId=${shareId}`,
+    downloadUrl: `/api/share/${shareId}/export?viewId=${viewId}`,
     key: 'share',
   });
   const fullPath = router.asPath;
