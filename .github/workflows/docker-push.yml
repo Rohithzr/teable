@@ -16,8 +16,8 @@ jobs:
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PAT }}
 
       - name: Build and push
         uses: docker/build-push-action@v5
@@ -25,6 +25,5 @@ jobs:
           context: .
           file: dockers/teable/Dockerfile
           push: true
-          tags: docker.io/${{ secrets.DOCKER_USERNAME }}/teable:latest
-
+          tags: docker.io/${{ secrets.DOCKER_USER }}/teable:latest
 
