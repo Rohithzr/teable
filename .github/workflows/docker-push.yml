@@ -2,7 +2,7 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: [f-v1.18]
+    branches: [f-v1.18, v1.8-dev]
 
 jobs:
   build:
