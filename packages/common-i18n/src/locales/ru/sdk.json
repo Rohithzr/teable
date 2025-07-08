@@ -55,7 +55,18 @@
       "helperExample": "Пример: ",
       "fieldValue": "Возвращает значение для поля {{fieldName}}.",
       "placeholder": "Введите формулу",
-      "placeholderForAI": "Введите формулу или введите // для генерации с помощью AI"
+      "placeholderForAIPrompt": "Опишите формулу, которую вы хотите сгенерировать",
+      "editExpression": "Редактировать формулу",
+      "generateExpressionByAI": "Сгенерировать формулу с помощью AI",
+      "inputPrompt": "Введите инструкцию",
+      "generateExpression": "Сгенерированная формула",
+      "generatingByAI": "Сгенерирование формулы с помощью AI...",
+      "generatedExpressionTips": "После генерации, нажмите на кнопку Применить, чтобы вставить формулу быстро",
+      "action": {
+        "generating": "Сгенерирование...",
+        "generate": "Сгенерировать",
+        "apply": "Применить"
+      }
     },
     "link": {
       "placeholder": "Выберите записи для ссылки",
@@ -142,6 +153,7 @@
         "daysAgo": "дней назад",
         "daysFromNow": "дней вперед",
         "exactDate": "точная дата",
+        "exactFormatDate": "точная дата (форматированная)",
         "pastWeek": "прошлая неделя",
         "pastMonth": "прошлый месяц",
         "pastYear": "прошлый год",
@@ -160,7 +172,12 @@
     "short": "низкий",
     "medium": "средний",
     "tall": "высокий",
-    "extraTall": "очень высокий"
+    "extraTall": "очень высокий",
+    "title": "Настройка высоты строки"
+  },
+  "fieldNameConfig": {
+    "title": "Настройка имени поля",
+    "displayLines": "{{count}} строк"
   },
   "share": {
     "title": "Поделиться"
@@ -724,6 +741,35 @@
       "delete": "Удалить",
       "linkText": "Текст ссылки",
       "enterUrl": "Введите URL"
+    }
+  },
+  "httpErrors": {
+    "validationError": "Ошибка валидации",
+    "invalidCaptcha": "Неверный Captcha",
+    "invalidCredentials": "Неверные учетные данные",
+    "unauthorized": "Неавторизован",
+    "unauthorizedShare": "Неавторизованная доступ",
+    "paymentRequired": "Требуется оплата",
+    "restrictedResource": "Ограниченный ресурс",
+    "notFound": "Не найдено",
+    "conflict": "Конфликт",
+    "unprocessableEntity": "Необрабатываемый ресурс",
+    "userLimitExceeded": "Превышен лимит пользователя",
+    "tooManyRequests": "Слишком много запросов",
+    "internalServerError": "Внутренняя ошибка сервера",
+    "databaseConnectionUnavailable": "Недоступная база данных",
+    "gatewayTimeout": "Таймаут шлюза",
+    "unknownErrorCode": "Неизвестный код ошибки",
+    "viewNotFound": "Не найден вид",
+    "requestTimeout": "Таймаут запроса",
+    "failedDependency": "Ошибка зависимости",
+    "custom": {
+      "fieldValueNotNull": "\"{{tableName}}\" поле \"{{fieldName}}\" не допускает пустые значения, пожалуйста, заполните его полностью перед отправкой.",
+      "fieldValueDuplicate": "\"{{tableName}}\" поле \"{{fieldName}}\" не допускает дубликаты значений, пожалуйста, заполните уникальное значение перед отправкой.",
+      "linkFieldValueDuplicate": "\"{{fieldName}}\" поле не допускает дубликаты связей с одним и тем же записью",
+      "requestTimeout": "Текущая операция слишком велика, пожалуйста, попробуйте снова с меньшим диапазоном.",
+      "searchTimeOut": "Поиск завершился, уменьшите область поиска и повторите.",
+      "dependencyNodeRequire": "Залежність не виконана"
     }
   }
 }

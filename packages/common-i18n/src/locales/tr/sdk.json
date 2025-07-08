@@ -54,7 +54,20 @@
       "guideSyntax": "Sözdizimi",
       "guideExample": "Örnek",
       "helperExample": "Örnek: ",
-      "fieldValue": "{{fieldName}} alanındaki hücrelerin değerini döndürür."
+      "fieldValue": "{{fieldName}} alanındaki hücrelerin değerini döndürür.",
+      "placeholder": "Bir ifade girin",
+      "placeholderForAIPrompt": "Oluşturmak istediğiniz formülü açıklayın",
+      "editExpression": "Formülü düzenle",
+      "generateExpressionByAI": "AI ile formül oluştur",
+      "inputPrompt": "Giriş komutu",
+      "generateExpression": "Oluşturulan formül",
+      "generatingByAI": "AI ile formül oluşturuluyor...",
+      "generatedExpressionTips": "Oluşturulan formülü uygulamak için Uygula düğmesine tıklayın",
+      "action": {
+        "generating": "Oluşturuluyor...",
+        "generate": "Oluştur",
+        "apply": "Uygula"
+      }
     },
     "link": {
       "placeholder": "Bağlanacak kayıtları seçin",
@@ -142,6 +155,7 @@
         "daysAgo": "gün önce",
         "daysFromNow": "gün sonra",
         "exactDate": "tam tarih",
+        "exactFormatDate": "tam tarih (biçimlendirildi)",
         "pastWeek": "geçen hafta",
         "pastMonth": "geçen ay",
         "pastYear": "geçen yıl",
@@ -160,7 +174,12 @@
     "short": "kısa",
     "medium": "orta",
     "tall": "uzun",
-    "extraTall": "çok uzun"
+    "extraTall": "çok uzun",
+    "title": "Satır yüksekliği yapılandırma"
+  },
+  "fieldNameConfig": {
+    "title": "Alan adı yapılandırma",
+    "displayLines": "{{count}} satır"
   },
   "share": {
     "title": "paylaş"
@@ -722,6 +741,35 @@
       "delete": "Sil",
       "linkText": "Bağlantı Metni",
       "enterUrl": "URL Girin"
+    }
+  },
+  "httpErrors": {
+    "validationError": "Doğrulama Hatası",
+    "invalidCaptcha": "Geçersiz Captcha",
+    "invalidCredentials": "Geçersiz Kimlik Bilgileri",
+    "unauthorized": "Yetkisiz",
+    "unauthorizedShare": "Yetkisiz Paylaşım",
+    "paymentRequired": "Ödeme Gerekli",
+    "restrictedResource": "Kısıtlı Kaynak",
+    "notFound": "Bulunamadı",
+    "conflict": "Çatışma",
+    "unprocessableEntity": "İşlenemeyen Varlık",
+    "userLimitExceeded": "Kullanıcı Limit Aşıldı",
+    "tooManyRequests": "Çok Fazla İstek",
+    "internalServerError": "Sunucu Hatası",
+    "databaseConnectionUnavailable": "Veritabanı Bağlantısı Mevcut Değil",
+    "gatewayTimeout": "Ağ Geçidi Zaman Aşımı",
+    "unknownErrorCode": "Bilinmeyen Hata Kodu",
+    "viewNotFound": "Görünüm Bulunamadı",
+    "requestTimeout": "İstek Zaman Aşımı",
+    "failedDependency": "Bağımlılık Hatası",
+    "custom": {
+      "fieldValueNotNull": "\"{{tableName}}\" alanı \"{{fieldName}}\" boş değerlere izin vermiyor, lütfen tamamlayınız ve gönderimden önce doldurun.",
+      "fieldValueDuplicate": "\"{{tableName}}\" alanı \"{{fieldName}}\" tekrarlayan değerlere izin vermiyor, lütfen benzersiz bir değer doldurun ve gönderimden önce doldurun.",
+      "linkFieldValueDuplicate": "\"{{fieldName}}\" alanı aynı kayıtla tekrarlayan değerlere izin vermiyor.",
+      "requestTimeout": "İşlem kapsamı çok büyük, lütfen kapsamı daraltıp tekrar deneyin.",
+      "searchTimeOut": "Arama tamamlandı, arama kapsamını azaltarak tekrar deneyin.",
+      "dependencyNodeRequire": "Bağımlı düğüm test edilmedi, lütfen önceki düğümleri test edin"
     }
   }
 }

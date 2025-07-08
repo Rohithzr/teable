@@ -2,7 +2,6 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import type { IAttachmentCellValue, IAttachmentItem, IMakeOptional } from '@teable/core';
 import { FieldKeyType, FieldType, generateOperationId } from '@teable/core';
 import { PrismaService } from '@teable/db-main-prisma';
-import { UploadType } from '@teable/openapi';
 import type {
   IRecordHistoryItemVo,
   ICreateRecordsRo,
@@ -21,10 +20,10 @@ import { IThresholdConfig, ThresholdConfig } from '../../../configs/threshold.co
 import { EventEmitterService } from '../../../event-emitter/event-emitter.service';
 import { Events } from '../../../event-emitter/events';
 import type { IClsStore } from '../../../types/cls';
+import { retryOnDeadlock } from '../../../utils/retry-on-dead-lock';
 import { AttachmentsStorageService } from '../../attachments/attachments-storage.service';
 import { AttachmentsService } from '../../attachments/attachments.service';
-import StorageAdapter from '../../attachments/plugins/adapter';
-import { getFullStorageUrl } from '../../attachments/plugins/utils';
+import { getPublicFullStorageUrl } from '../../attachments/plugins/utils';
 import { SystemFieldService } from '../../calculation/system-field.service';
 import { CollaboratorService } from '../../collaborator/collaborator.service';
 import { FieldConvertingService } from '../../field/field-calculate/field-converting.service';
@@ -262,6 +261,7 @@ export class RecordOpenApiService {
     }));
   }
 
+  @retryOnDeadlock()
   async updateRecords(
     tableId: string,
     updateRecordsRo: IUpdateRecordsRo & {
@@ -332,17 +332,40 @@ export class RecordOpenApiService {
       });
     }
 
-    const snapshots = await this.recordService.getSnapshotBulk(
+    const snapshots = await this.recordService.getSnapshotBulkWithPermission(
       tableId,
       recordIds,
       undefined,
-      updateRecordsRo.fieldKeyType
+      fieldKeyType
     );
-
     return {
       records: snapshots.map((snapshot) => snapshot.data),
       cellContexts,
     };
+  }
+
+  async simpleUpdateRecords(
+    tableId: string,
+    updateRecordsRo: IUpdateRecordsRo & {
+      records: {
+        id: string;
+        fields: Record<string, unknown>;
+        order?: Record<string, number>;
+      }[];
+    }
+  ) {
+    const { fieldKeyType = FieldKeyType.Name, records } = updateRecordsRo;
+    const preparedRecords = await this.systemFieldService.getModifiedSystemOpsMap(
+      tableId,
+      fieldKeyType,
+      records
+    );
+
+    return await this.recordCalculateService.calculateUpdatedRecord(
+      tableId,
+      fieldKeyType,
+      preparedRecords
+    );
   }
 
   async updateRecord(
@@ -360,11 +383,11 @@ export class RecordOpenApiService {
       windowId
     );
 
-    const snapshots = await this.recordService.getSnapshotBulk(
+    const snapshots = await this.recordService.getSnapshotBulkWithPermission(
       tableId,
       [recordId],
       undefined,
-      updateRecordRo.fieldKeyType
+      updateRecordRo.fieldKeyType || FieldKeyType.Name
     );
 
     if (snapshots.length !== 1) {
@@ -381,7 +404,7 @@ export class RecordOpenApiService {
 
   async deleteRecords(tableId: string, recordIds: string[], windowId?: string) {
     const { records, orders } = await this.prismaService.$tx(async () => {
-      const records = await this.recordService.getRecordsById(tableId, recordIds);
+      const records = await this.recordService.getRecordsById(tableId, recordIds, false);
       await this.recordCalculateService.calculateDeletedRecord(tableId, records.records);
       const orders = windowId
         ? await this.recordService.getRecordIndexes(tableId, recordIds)
@@ -408,7 +431,7 @@ export class RecordOpenApiService {
     tableId: string,
     recordId: string | undefined,
     query: IGetRecordHistoryQuery,
-    excludeFieldIds?: string[]
+    projectionIds?: string[]
   ): Promise<IRecordHistoryVo> {
     const { cursor, startDate, endDate } = query;
     const limit = 20;
@@ -426,7 +449,7 @@ export class RecordOpenApiService {
         tableId,
         ...(recordId ? { recordId } : {}),
         ...(Object.keys(dateFilter).length > 0 ? { createdTime: dateFilter } : {}),
-        ...(excludeFieldIds?.length ? { fieldId: { notIn: excludeFieldIds } } : {}),
+        ...(projectionIds?.length ? { fieldId: { in: projectionIds } } : {}),
       },
       select: {
         id: true,
@@ -507,7 +530,7 @@ export class RecordOpenApiService {
       const { avatar } = user;
       return {
         ...user,
-        avatar: avatar && getFullStorageUrl(StorageAdapter.getBucket(UploadType.Avatar), avatar),
+        avatar: avatar && getPublicFullStorageUrl(avatar),
       };
     });
 
@@ -582,8 +605,13 @@ export class RecordOpenApiService {
     return await this.updateRecord(tableId, recordId, updateRecordRo);
   }
 
-  async duplicateRecord(tableId: string, recordId: string, order: IRecordInsertOrderRo) {
-    const query = { fieldKeyType: FieldKeyType.Id };
+  async duplicateRecord(
+    tableId: string,
+    recordId: string,
+    order: IRecordInsertOrderRo,
+    projection?: string[]
+  ) {
+    const query = { fieldKeyType: FieldKeyType.Id, projection };
     const result = await this.recordService.getRecord(tableId, recordId, query);
     const records = { fields: result.fields };
     const createRecordsRo = {
@@ -591,6 +619,10 @@ export class RecordOpenApiService {
       order,
       records: [records],
     };
-    return await this.prismaService.$tx(async () => this.createRecords(tableId, createRecordsRo));
+    return await this.prismaService
+      .$tx(async () => this.createRecords(tableId, createRecordsRo))
+      .then((res) => {
+        return res.records[0];
+      });
   }
 }

@@ -57,7 +57,18 @@
       "helperExample": "Beispiel: ",
       "fieldValue": "Gibt den Wert in den Zellen des Feldes {{fieldName}} zurück.",
       "placeholder": "Einen Ausdruck eingeben",
-      "placeholderForAI": "Geben Sie einen Ausdruck ein oder drücken Sie //, um mit AI zu generieren"
+      "placeholderForAIPrompt": "Beschreiben Sie die Formel, die Sie generieren möchten",
+      "editExpression": "Formel bearbeiten",
+      "generateExpressionByAI": "Formel mit AI generieren",
+      "inputPrompt": "Eingabeanweisung",
+      "generateExpression": "Generierte Formel",
+      "generatingByAI": "Formel mit AI generieren...",
+      "generatedExpressionTips": "Nach Generieren, klicken Sie auf Anwenden, um die Formel schnell einzufügen",
+      "action": {
+        "generating": "Generieren...",
+        "generate": "Generieren",
+        "apply": "Anwenden"
+      }
     },
     "link": {
       "placeholder": "Zu verknüpfende Datensätze auswählen",
@@ -145,6 +156,7 @@
         "daysAgo": "Tage her",
         "daysFromNow": "Tage ab jetzt",
         "exactDate": "exaktes Datum",
+        "exactFormatDate": "exaktes Datum (formatiert)",
         "currentWeek": "Aktuelle Woche",
         "currentMonth": "Aktueller Monat",
         "currentYear": "Aktuelles Jahr",
@@ -172,7 +184,12 @@
     "short": "kurz",
     "medium": "mittel",
     "tall": "groß",
-    "extraTall": "extra groß"
+    "extraTall": "extra groß",
+    "title": "Zeilenhöhenkonfiguration"
+  },
+  "fieldNameConfig": {
+    "title": "Feldname-Konfiguration",
+    "displayLines": "{{count}} Zeilen"
   },
   "share": {
     "title": "teilen"
@@ -752,5 +769,34 @@
     "noSelected": "Unausgewählt",
     "empty": "Keine Mitglieder",
     "emptyDepartment": "Keine Abteilungen"
+  },
+  "httpErrors": {
+    "validationError": "Datenvalidierungsfehler",
+    "invalidCaptcha": "Ungültige Captcha",
+    "invalidCredentials": "Ungültige Anmeldeinformationen",
+    "unauthorized": "Nicht autorisiert",
+    "unauthorizedShare": "Nicht autorisierte Freigabe",
+    "paymentRequired": "Zahlung erforderlich",
+    "restrictedResource": "Eingeschränkte Ressource",
+    "notFound": "Nicht gefunden",
+    "conflict": "Konflikt",
+    "unprocessableEntity": "Nicht verarbeitbare Entität",
+    "userLimitExceeded": "Benutzerlimit überschritten",
+    "tooManyRequests": "Zu viele Anfragen",
+    "internalServerError": "Interner Serverfehler",
+    "databaseConnectionUnavailable": "Datenbankverbindung nicht verfügbar",
+    "gatewayTimeout": "Gateway Timeout",
+    "unknownErrorCode": "Unbekannter Fehlercode",
+    "viewNotFound": "Ansicht nicht gefunden",
+    "requestTimeout": "Operationen außerhalb des Bereichs",
+    "failedDependency": "Abhängigkeitsfehler",
+    "custom": {
+      "fieldValueNotNull": "\"{{tableName}}\" Feld \"{{fieldName}}\" darf keine leeren Werte enthalten, bitte vollständig ausfüllen bevor Sie absenden.",
+      "fieldValueDuplicate": "\"{{tableName}}\" Feld \"{{fieldName}}\" darf keine doppelten Werte enthalten, bitte einen eindeutigen Wert vor dem Absenden ausfüllen.",
+      "linkFieldValueDuplicate": "\"{{fieldName}}\" Feld darf keine doppelten Werte enthalten, bitte einen eindeutigen Wert vor dem Absenden ausfüllen.",
+      "requestTimeout": "Der aktuelle Vorgangsbereich ist zu groß, bitte versuchen Sie es mit einem kleineren Bereich erneut.",
+      "searchTimeOut": "Suche ist abgelaufen, bitte die Suchbegriffe reduzieren und erneut versuchen.",
+      "dependencyNodeRequire": "Abhängiger Knoten nicht getestet, bitte überprüfen Sie, ob alle vorherigen Knoten getestet wurden"
+    }
   }
 }

@@ -1,7 +1,14 @@
 /* eslint-disable sonarjs/no-duplicate-string */
 import type { INestApplication } from '@nestjs/common';
 import type { IFieldRo, ILinkFieldOptions, ILookupOptionsRo } from '@teable/core';
-import { DriverClient, FieldType, Relationship, Role, ViewType } from '@teable/core';
+import {
+  DriverClient,
+  FieldAIActionType,
+  FieldType,
+  Relationship,
+  Role,
+  ViewType,
+} from '@teable/core';
 import type { ICreateBaseVo, ICreateSpaceVo } from '@teable/openapi';
 import {
   CREATE_SPACE,
@@ -28,6 +35,8 @@ import {
   installPluginPanel,
   installViewPlugin,
   listPluginPanels,
+  LLMProviderType,
+  updateSetting,
   urlBuilder,
 } from '@teable/openapi';
 import type { AxiosInstance } from 'axios';
@@ -81,6 +90,44 @@ describe('OpenAPI Base Duplicate (e2e)', () => {
     expect(true).toBeTruthy();
     return;
   }
+
+  it('duplicate base with cross base link and lookup field', async () => {
+    const base2 = (await createBase({ spaceId, name: 'test base 2' })).data;
+    const base2Table = await createTable(base2.id, { name: 'table1' });
+
+    const table1 = await createTable(base.id, { name: 'table1' });
+
+    const crossBaseLinkField = (
+      await createField(table1.id, {
+        name: 'cross base link field',
+        type: FieldType.Link,
+        options: {
+          baseId: base2.id,
+          relationship: Relationship.ManyMany,
+          foreignTableId: base2Table.id,
+        },
+      })
+    ).data;
+
+    await createField(table1.id, {
+      name: 'cross base lookup field',
+      type: FieldType.SingleLineText,
+      isLookup: true,
+      lookupOptions: {
+        foreignTableId: base2Table.id,
+        linkFieldId: crossBaseLinkField.id,
+        lookupFieldId: base2Table.fields[0].id,
+      },
+    });
+
+    const dupResult = await duplicateBase({
+      fromBaseId: base.id,
+      spaceId: spaceId,
+      name: 'test base copy',
+    });
+
+    expect(dupResult.status).toBe(201);
+  });
 
   it('duplicate within current space', async () => {
     const table1 = await createTable(base.id, { name: 'table1' });
@@ -296,6 +343,62 @@ describe('OpenAPI Base Duplicate (e2e)', () => {
     await deleteBase(dupResult.data.id);
   });
 
+  it('should duplicate ai field relative config', async () => {
+    const tableWithAiField = await createTable(base.id, { name: 'table-ai-field' });
+
+    const aiSetting = (
+      await updateSetting({
+        aiConfig: {
+          enable: true,
+          llmProviders: [
+            {
+              apiKey: 'test-ai-config',
+              baseUrl: 'localhost:3000/api/test',
+              models: 'test-e2e',
+              name: 'test',
+              type: LLMProviderType.ANTHROPIC,
+            },
+          ],
+        },
+      })
+    ).data;
+
+    const codingModel = aiSetting.aiConfig?.llmProviders[0].models;
+
+    const aiField = (
+      await createField(tableWithAiField.id, {
+        name: 'ai field',
+        type: FieldType.SingleLineText,
+        aiConfig: {
+          attachPrompt: 'test-attach-prompt',
+          modelKey: codingModel,
+          sourceFieldId: tableWithAiField.fields[0].id,
+          type: FieldAIActionType.Summary,
+        },
+      })
+    ).data;
+
+    const dupResult = await duplicateBase({
+      fromBaseId: base.id,
+      spaceId: spaceId,
+      name: 'test base copy',
+      withRecords: true,
+    });
+
+    const tableList = await getTableList(dupResult.data.id);
+    const duplicatedTableWithAiField = tableList.data.find(
+      ({ name }) => name === tableWithAiField.name
+    );
+    const duplicatedFields = (await getFields(duplicatedTableWithAiField!.id)).data;
+    const duplicatedAiField = duplicatedFields.find((f) => f.aiConfig);
+    expect(duplicatedAiField?.aiConfig).toEqual({
+      ...aiField.aiConfig,
+      sourceFieldId: duplicatedFields[0].id,
+    });
+
+    await deleteBase(dupResult.data.id);
+  });
+
   describe('Duplicate cross space', () => {
     let newSpace: ICreateSpaceVo;
     beforeEach(async () => {
@@ -306,7 +409,7 @@ describe('OpenAPI Base Duplicate (e2e)', () => {
       await deleteSpace(newSpace.id);
     });
 
-    it('duplicate cross space', async () => {
+    it('duplicate base to another space', async () => {
       await createTable(base.id, { name: 'table1' });
       const dupResult = await duplicateBase({
         fromBaseId: base.id,

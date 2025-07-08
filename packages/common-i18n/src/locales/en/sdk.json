@@ -57,7 +57,18 @@
       "helperExample": "Example: ",
       "fieldValue": "Returns the value to the cells of the {{fieldName}} field.",
       "placeholder": "Enter an expression",
-      "placeholderForAI": "Enter an expression or press // to generate with AI"
+      "placeholderForAIPrompt": "Describe the formula you want to generate",
+      "editExpression": "Edit formula",
+      "generateExpressionByAI": "Generate formula by AI",
+      "inputPrompt": "Input instruction",
+      "generateExpression": "Generated formula",
+      "generatingByAI": "Generating formula by AI...",
+      "generatedExpressionTips": "After generating, click apply to quickly insert the formula",
+      "action": {
+        "generating": "Generating...",
+        "generate": "Generate",
+        "apply": "Apply"
+      }
     },
     "link": {
       "placeholder": "Select records to link",
@@ -145,6 +156,7 @@
         "daysAgo": "days ago",
         "daysFromNow": "days from now",
         "exactDate": "exact date",
+        "exactFormatDate": "exact date (formatted)",
         "currentWeek": "current week",
         "currentMonth": "current month",
         "currentYear": "current year",
@@ -172,7 +184,12 @@
     "short": "short",
     "medium": "medium",
     "tall": "tall",
-    "extraTall": "extraTall"
+    "extraTall": "extraTall",
+    "title": "Row height configuration"
+  },
+  "fieldNameConfig": {
+    "title": "Field name configuration",
+    "displayLines": "{{count}} lines"
   },
   "share": {
     "title": "share"
@@ -752,5 +769,34 @@
     "noSelected": "No selected",
     "empty": "No members",
     "emptyDepartment": "No departments"
+  },
+  "httpErrors": {
+    "validationError": "Validation Error",
+    "invalidCaptcha": "Invalid Captcha",
+    "invalidCredentials": "Invalid Credentials",
+    "unauthorized": "Unauthorized",
+    "unauthorizedShare": "Unauthorized Share",
+    "paymentRequired": "Payment Required",
+    "restrictedResource": "Restricted Resource",
+    "notFound": "Not Found",
+    "conflict": "Conflict",
+    "unprocessableEntity": "Unprocessable Entity",
+    "userLimitExceeded": "User Limit Exceeded",
+    "tooManyRequests": "Too Many Requests",
+    "internalServerError": "Internal Server Error",
+    "databaseConnectionUnavailable": "Database Connection Unavailable",
+    "gatewayTimeout": "Gateway Timeout",
+    "unknownErrorCode": "Unknown Error Code",
+    "viewNotFound": "View Not Found",
+    "requestTimeout": "Request Timeout",
+    "failedDependency": "Failed Dependency",
+    "custom": {
+      "fieldValueNotNull": "\"{{tableName}}\" field \"{{fieldName}}\" does not allow empty values, please fill in completely before submitting.",
+      "fieldValueDuplicate": "\"{{tableName}}\" field \"{{fieldName}}\" does not allow duplicate values, please fill in a unique value before submitting.",
+      "linkFieldValueDuplicate": "\"{{fieldName}}\" field does not allow duplicate associations with the same record",
+      "requestTimeout": "This action is too large, please try with a smaller scope.",
+      "searchTimeOut": "search timeout, please decrease the search scope and try again",
+      "dependencyNodeRequire": "Dependency node not tested, please check if all previous nodes have been tested"
+    }
   }
 }

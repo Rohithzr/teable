@@ -43,6 +43,7 @@ import type {
 import { Knex } from 'knex';
 import { InjectModel } from 'nest-knexjs';
 import { ClsService } from 'nestjs-cls';
+import { IThresholdConfig, ThresholdConfig } from '../../../configs/threshold.config';
 import { InjectDbProvider } from '../../../db-provider/db.provider';
 import { IDbProvider } from '../../../db-provider/db.provider.interface';
 import { EventEmitterService } from '../../../event-emitter/event-emitter.service';
@@ -71,7 +72,8 @@ export class ViewOpenApiService {
     private readonly eventEmitterService: EventEmitterService,
     private readonly cls: ClsService<IClsStore>,
     @InjectDbProvider() private readonly dbProvider: IDbProvider,
-    @InjectModel('CUSTOM_KNEX') private readonly knex: Knex
+    @InjectModel('CUSTOM_KNEX') private readonly knex: Knex,
+    @ThresholdConfig() private readonly thresholdConfig: IThresholdConfig
   ) {}
 
   async createView(tableId: string, viewRo: IViewRo) {
@@ -158,12 +160,17 @@ export class ViewOpenApiService {
       manualSort: true,
     };
 
-    await this.prismaService.$tx(async (prisma) => {
-      await prisma.$executeRawUnsafe(
-        this.updateRecordOrderSql(orderRawSql, dbTableName, indexField)
-      );
-      await this.viewService.updateViewSort(tableId, viewId, newSort);
-    });
+    await this.prismaService.$tx(
+      async (prisma) => {
+        await prisma.$executeRawUnsafe(
+          this.updateRecordOrderSql(orderRawSql, dbTableName, indexField)
+        );
+        await this.viewService.updateViewSort(tableId, viewId, newSort);
+      },
+      {
+        timeout: this.thresholdConfig.bigTransactionTimeout,
+      }
+    );
   }
 
   async updateViewColumnMeta(
@@ -786,7 +793,18 @@ export class ViewOpenApiService {
     const userId = this.cls.get('user.id');
     const { name, pluginId } = ro;
     const plugin = await this.prismaService.txClient().plugin.findUnique({
-      where: { id: pluginId, status: PluginStatus.Published },
+      where: {
+        id: pluginId,
+        OR: [
+          {
+            status: PluginStatus.Published,
+          },
+          {
+            status: { not: PluginStatus.Published },
+            createdBy: this.cls.get('user.id'),
+          },
+        ],
+      },
       select: { id: true, name: true, logo: true, positions: true },
     });
     if (!plugin) {

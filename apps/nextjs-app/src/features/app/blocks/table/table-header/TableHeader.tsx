@@ -8,7 +8,7 @@ import {
   UserPlus,
 } from '@teable/icons';
 import { RecordHistory } from '@teable/sdk/components/expand-record/RecordHistory';
-import { useBase, useBasePermission, useTableId, useView } from '@teable/sdk/hooks';
+import { useBase, useBasePermission, useIsHydrated, useTableId, useView } from '@teable/sdk/hooks';
 import {
   Button,
   cn,
@@ -34,6 +34,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useTranslation } from 'next-i18next';
 import { Fragment, useState } from 'react';
+import { ChatTriggerButton } from '@/features/app/components/ai-chat/panel/ChatTriggerButton';
 import { BaseCollaboratorModalTrigger } from '@/features/app/components/collaborator-manage/base/BaseCollaboratorModal';
 import { tableConfig } from '@/features/i18n/table.config';
 import { usePluginPanelStorage } from '../../../components/plugin-panel/hooks/usePluginPanelStorage';
@@ -41,7 +42,6 @@ import { TableTrash } from '../../trash/components/TableTrash';
 import { TableTrashDialog } from '../../trash/components/TableTrashDialog';
 import { ExpandViewList } from '../../view/list/ExpandViewList';
 import { ViewList } from '../../view/list/ViewList';
-
 import { useLockedViewTipStore } from '../store';
 import { AddView } from './AddView';
 import { Collaborators } from './Collaborators';
@@ -60,13 +60,14 @@ const RightList = ({
   const tableId = useTableId();
   const { t } = useTranslation(tableConfig.i18nNamespaces);
   const basePermission = useBasePermission();
+  const isHydrated = useIsHydrated();
 
   const hasTableHistoryPermission = basePermission?.['table_record_history|read'];
   const hasTableTrashPermission = basePermission?.['table|trash_read'];
 
   const [isHistoryDialogOpen, setHistoryDialogOpen] = useState(false);
   const [isTrashDialogOpen, setTrashDialogOpen] = useState(false);
-  const { toggleVisible } = usePluginPanelStorage(tableId!);
+  const { toggleVisible: togglePluginPanel } = usePluginPanelStorage(tableId!);
 
   const onRecordClick = (recordId: string) => {
     router.push(
@@ -83,7 +84,7 @@ const RightList = ({
 
   return (
     <div className={cn('flex', className)}>
-      <Collaborators className="flex" />
+      {isHydrated && <Collaborators className="flex" />}
       <div className="flex">
         {(hasTableHistoryPermission || hasTableTrashPermission) && (
           <DropdownMenu>
@@ -124,10 +125,11 @@ const RightList = ({
           variant="ghost"
           size="xs"
           className={cn('flex', buttonClassName)}
-          onClick={toggleVisible}
+          onClick={togglePluginPanel}
         >
           <Puzzle className="size-4" />
         </Button>
+        <ChatTriggerButton buttonClassName={buttonClassName} />
         <Button asChild variant="ghost" size="xs" className={cn('flex', buttonClassName)}>
           <a href={t('help.mainLink')} title={t('help.title')} target="_blank" rel="noreferrer">
             <HelpCircle className="size-4" />
@@ -171,6 +173,7 @@ const RightMenu = ({ className }: { className?: string }) => {
   const tableId = useTableId();
   const basePermission = useBasePermission();
   const { t } = useTranslation(tableConfig.i18nNamespaces);
+  const [open, setOpen] = useState(false);
 
   const hasTableHistoryPermission = basePermission?.['table_record_history|read'];
   const hasTableTrashPermission = basePermission?.['table|trash_read'];
@@ -190,7 +193,7 @@ const RightMenu = ({ className }: { className?: string }) => {
   };
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant={'ghost'}
@@ -270,6 +273,9 @@ const RightMenu = ({ className }: { className?: string }) => {
               <HelpCircle className="size-4" /> {t('help.title')}
             </a>
           </Button>
+          <ChatTriggerButton buttonClassName="flex justify-start" onClick={() => setOpen(false)}>
+            {t('common:noun.aiChat')}
+          </ChatTriggerButton>
         </div>
       </PopoverContent>
     </Popover>

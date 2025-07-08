@@ -13,8 +13,8 @@ import { FieldKeyType } from '@teable/core';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Loader2 } from '@teable/icons';
 import { updateRecord } from '@teable/openapi';
 import { AppContext, CalendarDailyCollectionContext } from '@teable/sdk/context';
-import { useTableId } from '@teable/sdk/hooks';
-import { Record } from '@teable/sdk/model';
+import { useTableId, useRecordOperations } from '@teable/sdk/hooks';
+import type { Record } from '@teable/sdk/model';
 import {
   Button,
   Dialog,
@@ -79,6 +79,7 @@ export const Calendar = (props: ICalendarProps) => {
   const { lang = 'en' } = useContext(AppContext);
   const calendarDailyCollection = useContext(CalendarDailyCollectionContext);
   const { openEventMenu } = useEventMenuStore();
+  const { createRecords } = useRecordOperations();
   const [positionDate, setPositionDate] = useState<Date>();
   const [moreLinkDate, setMoreLinkDate] = useState<Date>();
   const [title, setTitle] = useState<string>('');
@@ -136,7 +137,7 @@ export const Calendar = (props: ICalendarProps) => {
         const newDate = set(date, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
         const newDateStr = fromZonedTime(newDate, timeZone).toISOString();
 
-        const { data } = await Record.createRecords(tableId, {
+        const { data } = await createRecords(tableId, {
           fieldKeyType: FieldKeyType.Id,
           records: [
             {
@@ -190,6 +191,7 @@ export const Calendar = (props: ICalendarProps) => {
         .querySelectorAll(`.${ADD_EVENT_BUTTON_CLASS_NAME}`)
         .forEach((button) => button.remove());
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tableId, endDateField, startDateField, eventCreatable, dateRange, setExpandRecordId]);
 
   const onDatesChanged = (data: { start: Date; end: Date }) => {
@@ -258,21 +260,40 @@ export const Calendar = (props: ICalendarProps) => {
         const dayEl = element.closest('.fc-day') as HTMLElement;
         const date = dayEl?.dataset.date;
         if (date && countMap[date]) {
-          element.textContent = t('table:calendar.moreLinkText', { count: countMap[date] });
+          const newText = t('table:calendar.moreLinkText', { count: countMap[date] });
+          if (element.textContent !== newText) {
+            element.textContent = newText;
+          }
         }
       });
     };
 
-    updateMoreLinkText();
+    const calendarContainer = containerRef.current;
 
-    const observer = new MutationObserver(updateMoreLinkText);
-    observer.observe(document.body, {
+    if (!calendarContainer) return;
+
+    const observer = new MutationObserver((mutations) => {
+      const relevantMutations = mutations.filter((mutation) =>
+        Array.from(mutation.addedNodes).some(
+          (node) =>
+            node instanceof HTMLElement &&
+            (node.classList.contains(MORE_LINK_TEXT_CLASS_NAME) ||
+              node.querySelector(`.${MORE_LINK_TEXT_CLASS_NAME}`))
+        )
+      );
+
+      if (relevantMutations.length > 0) {
+        updateMoreLinkText();
+      }
+    });
+
+    observer.observe(calendarContainer, {
       subtree: true,
       childList: true,
     });
 
     return () => observer.disconnect();
-  }, [countMap, t]);
+  }, [countMap, t, containerRef]);
 
   const onEventDidMount = (info: EventMountArg) => {
     const element = info.el as HTMLElement;

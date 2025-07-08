@@ -20,9 +20,8 @@ import {
 import type { ReactNode } from 'react';
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { useTranslation } from '../../context/app/i18n';
-import { useFieldStaticGetter, useFields, useTableId } from '../../hooks';
+import { useFieldOperations, useFieldStaticGetter, useFields, useTableId } from '../../hooks';
 import type { IFieldInstance } from '../../model';
-import { Field } from '../../model';
 import { FieldCreator } from './FieldCreator';
 
 interface IFieldCreateOrSelectModalProps {
@@ -55,6 +54,7 @@ export const FieldCreateOrSelectModal = forwardRef<
   } = props;
   const tableId = useTableId();
   const totalFields = useFields({ withHidden: true, withDenied: true });
+  const { createField } = useFieldOperations();
   const getFieldStatic = useFieldStaticGetter();
   const [newField, setNewField] = useState<IFieldRo>();
   const { t } = useTranslation();
@@ -79,7 +79,7 @@ export const FieldCreateOrSelectModal = forwardRef<
       if (tableId == null) return setNewField(undefined);
       const result = createFieldRoSchema.safeParse(newField);
       if (result.success) {
-        const field = (await Field.createField(tableId, newField)).data;
+        const field = (await createField({ tableId, fieldRo: newField })).data;
         setNewField(undefined);
         return onConfirm?.(field);
       }
@@ -122,8 +122,12 @@ export const FieldCreateOrSelectModal = forwardRef<
             ) : (
               <RadioGroup className="gap-4" value={selectedFieldId} onValueChange={onFieldSelect}>
                 {filteredFields.map((field) => {
-                  const { id, type, name, isLookup, aiConfig } = field;
-                  const { Icon } = getFieldStatic(type, isLookup, Boolean(aiConfig));
+                  const { id, type, name, isLookup, aiConfig, canReadFieldRecord } = field;
+                  const { Icon } = getFieldStatic(type, {
+                    isLookup,
+                    hasAiConfig: Boolean(aiConfig),
+                    deniedReadRecord: !canReadFieldRecord,
+                  });
                   return (
                     <div key={id} className="flex items-center space-x-2">
                       <RadioGroupItem value={id} id={id} />

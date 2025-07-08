@@ -10,7 +10,7 @@ import type {
   IItemBaseCollaboratorUser,
   IListBaseCollaboratorUserRo,
 } from '@teable/openapi';
-import { CollaboratorType, UploadType, PrincipalType } from '@teable/openapi';
+import { CollaboratorType, PrincipalType } from '@teable/openapi';
 import { Knex } from 'knex';
 import { difference, map } from 'lodash';
 import { InjectModel } from 'nest-knexjs';
@@ -25,8 +25,7 @@ import {
 } from '../../event-emitter/events';
 import type { IClsStore } from '../../types/cls';
 import { getMaxLevelRole } from '../../utils/get-max-level-role';
-import StorageAdapter from '../attachments/plugins/adapter';
-import { getFullStorageUrl } from '../attachments/plugins/utils';
+import { getPublicFullStorageUrl } from '../attachments/plugins/utils';
 
 @Injectable()
 export class CollaboratorService {
@@ -141,7 +140,7 @@ export class CollaboratorService {
     baseId: string,
     options?: { includeSystem?: boolean; search?: string; type?: PrincipalType }
   ) {
-    const builder = this.knex();
+    const builder = this.knex.queryBuilder();
     await this.getBaseCollaboratorBuilder(builder, baseId, options);
     const res = await this.prismaService
       .txClient()
@@ -188,7 +187,7 @@ export class CollaboratorService {
       type?: PrincipalType;
     }
   ): Promise<CollaboratorItem[]> {
-    const builder = this.knex();
+    const builder = this.knex.queryBuilder();
     builder.whereNotNull('users.id');
     await this.getBaseCollaboratorBuilder(builder, baseId, options);
     await this.getListByBaseBuilder(builder, options);
@@ -211,9 +210,7 @@ export class CollaboratorService {
       userId: collaborator.user_id,
       userName: collaborator.user_name,
       email: collaborator.user_email,
-      avatar: collaborator.user_avatar
-        ? getFullStorageUrl(StorageAdapter.getBucket(UploadType.Avatar), collaborator.user_avatar)
-        : null,
+      avatar: collaborator.user_avatar ? getPublicFullStorageUrl(collaborator.user_avatar) : null,
       role: collaborator.role_name as IRole,
       createdTime: collaborator.created_time.toISOString(),
       resourceType: collaborator.resource_type as CollaboratorType,
@@ -235,7 +232,7 @@ export class CollaboratorService {
       where: { id: tableId },
     });
 
-    const builder = this.knex();
+    const builder = this.knex.queryBuilder();
     await this.getBaseCollaboratorBuilder(builder, baseId, {
       includeSystem: true,
     });
@@ -336,7 +333,7 @@ export class CollaboratorService {
       type?: PrincipalType;
     }
   ) {
-    const builder = this.knex();
+    const builder = this.knex.queryBuilder();
     await this.getSpaceCollaboratorBuilder(builder, spaceId, options);
     const res = await this.prismaService
       .txClient()
@@ -384,7 +381,7 @@ export class CollaboratorService {
       type?: PrincipalType;
     }
   ): Promise<CollaboratorItem[]> {
-    const builder = this.knex();
+    const builder = this.knex.queryBuilder();
     builder.whereNotNull('users.id');
     const { baseMap } = await this.getSpaceCollaboratorBuilder(builder, spaceId, options);
     await this.getListBySpaceBuilder(builder, options);
@@ -407,9 +404,7 @@ export class CollaboratorService {
       userId: collaborator.user_id,
       userName: collaborator.user_name,
       email: collaborator.user_email,
-      avatar: collaborator.user_avatar
-        ? getFullStorageUrl(StorageAdapter.getBucket(UploadType.Avatar), collaborator.user_avatar)
-        : null,
+      avatar: collaborator.user_avatar ? getPublicFullStorageUrl(collaborator.user_avatar) : null,
       role: collaborator.role_name as IRole,
       createdTime: collaborator.created_time.toISOString(),
       base: baseMap[collaborator.resource_id],
@@ -840,7 +835,7 @@ export class CollaboratorService {
 
   async getUserCollaborators(baseId: string, options?: IListBaseCollaboratorUserRo) {
     const { skip = 0, take = 50 } = options ?? {};
-    const builder = this.knex();
+    const builder = this.knex.queryBuilder();
     await this.getBaseCollaboratorBuilder(builder, baseId, options);
     builder.whereNotNull('users.id');
     builder.orderBy('collaborator.created_time', 'asc');
@@ -857,9 +852,7 @@ export class CollaboratorService {
       .$queryRawUnsafe<IItemBaseCollaboratorUser[]>(builder.toQuery());
     return res.map((item) => ({
       ...item,
-      avatar: item.avatar
-        ? getFullStorageUrl(StorageAdapter.getBucket(UploadType.Avatar), item.avatar)
-        : null,
+      avatar: item.avatar ? getPublicFullStorageUrl(item.avatar) : null,
     }));
   }
 }

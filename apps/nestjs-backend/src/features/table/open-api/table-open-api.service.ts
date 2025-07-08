@@ -136,22 +136,26 @@ export class TableOpenApiService {
 
     const allFieldRos = simpleFields.concat(computeFields);
 
+    const fieldVoMap = new Map<IFieldRo, IFieldVo>();
+    simpleFields.forEach((f, i) => fieldVoMap.set(f, fields[i]));
+
     for (const fieldRo of computeFields) {
-      fields.push(
-        await this.fieldSupplementService.prepareCreateField(
-          tableId,
-          fieldRo,
-          allFieldRos.filter((ro) => ro !== fieldRo) as IFieldVo[]
-        )
+      const computedFieldVo = await this.fieldSupplementService.prepareCreateField(
+        tableId,
+        fieldRo,
+        allFieldRos.filter((ro) => ro !== fieldRo) as IFieldVo[]
       );
+      fieldVoMap.set(fieldRo, computedFieldVo);
     }
 
-    const repeatedDbFieldNames = fields
+    const orderedFields = fieldRos.map((ro) => fieldVoMap.get(ro)).filter(Boolean) as IFieldVo[];
+
+    const repeatedDbFieldNames = orderedFields
       .map((f) => f.dbFieldName)
       .filter((value, index, self) => self.indexOf(value) !== index);
 
     // generator dbFieldName may repeat, this is fix it.
-    return fields.map((f) => {
+    return orderedFields.map((f) => {
       const newField = { ...f };
       const { dbFieldName } = newField;
 
@@ -614,6 +618,21 @@ export class TableOpenApiService {
         throw new NotFoundException(`Anchor ${anchorId} not found`);
       });
 
+    const tablesOrder = await this.prismaService.txClient().tableMeta.findMany({
+      where: {
+        baseId,
+        deletedTime: null,
+      },
+      select: {
+        order: true,
+      },
+    });
+
+    const uniqOrder = [...new Set(tablesOrder.map((t) => t.order))];
+
+    // if the table order has the same order, should shuffle
+    const shouldShuffle = uniqOrder.length !== tablesOrder.length;
+
     await updateOrder({
       query: baseId,
       position,
@@ -640,6 +659,7 @@ export class TableOpenApiService {
         });
       },
       shuffle: this.shuffle.bind(this),
+      shouldShuffle,
     });
   }
 
@@ -680,36 +700,17 @@ export class TableOpenApiService {
       {} as Record<RecordAction, boolean>
     );
 
-    const fields = await this.prismaService.field.findMany({
-      where: {
-        tableId,
-        deletedTime: null,
-      },
-    });
-
-    const excludeFieldCreate = actionPrefixMap[ActionPrefix.Field].filter(
-      (action) => action !== 'field|create'
-    );
-    const fieldPermission = fields.reduce(
-      (acc, field) => {
-        acc[field.id] = excludeFieldCreate.reduce(
-          (acc, action) => {
-            acc[action] = permissionMap[action];
-            return acc;
-          },
-          {} as Record<FieldAction, boolean>
-        );
+    const fieldPermission = actionPrefixMap[ActionPrefix.Field].reduce(
+      (acc, action) => {
+        acc[action] = permissionMap[action];
         return acc;
       },
-      {} as Record<string, Record<FieldAction, boolean>>
+      {} as Record<FieldAction, boolean>
     );
 
     return {
       table: tablePermission,
-      field: {
-        fields: fieldPermission,
-        create: permissionMap['field|create'],
-      },
+      field: fieldPermission,
       record: recordPermission,
       view: viewPermission,
     };

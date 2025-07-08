@@ -22,10 +22,11 @@ import {
   User as UserIcon,
   UserPlus as CreatedByIcon,
   UserEdit as LastModifiedByIcon,
+  EyeOff,
+  MagicAi,
 } from '@teable/icons';
 
 import { useCallback } from 'react';
-import { MagicAI } from '../components/comment/comment-editor/plate-ui/icons';
 import { useTranslation } from '../context/app/i18n';
 import {
   AttachmentField,
@@ -56,12 +57,23 @@ export const useFieldStaticGetter = () => {
   return useCallback(
     (
       type: FieldType,
-      isLookup: boolean | undefined,
-      hasAiConfig: boolean | undefined
+      config: {
+        isLookup: boolean | undefined;
+        hasAiConfig: boolean | undefined;
+        deniedReadRecord?: boolean;
+      } = {
+        isLookup: undefined,
+        hasAiConfig: undefined,
+      }
       // eslint-disable-next-line sonarjs/cognitive-complexity
     ): IFieldStatic => {
+      const { isLookup, hasAiConfig, deniedReadRecord } = config;
+
       const getIcon = (icon: React.FC<any>) => {
-        if (hasAiConfig) return MagicAI;
+        if (deniedReadRecord)
+          return (props: React.SVGProps<SVGSVGElement>) =>
+            EyeOff({ ...props, color: 'hsl(var(--destructive))' });
+        if (hasAiConfig) return MagicAi;
         return isLookup ? SearchIcon : icon;
       };
 

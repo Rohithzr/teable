@@ -34,6 +34,9 @@ export const BaseCard: FC<IBaseCard> = (props) => {
       queryClient.invalidateQueries({
         queryKey: ReactQueryKeys.baseAll(),
       });
+      queryClient.invalidateQueries({
+        queryKey: ReactQueryKeys.recentlyBase(),
+      });
     },
   });
 
@@ -42,6 +45,9 @@ export const BaseCard: FC<IBaseCard> = (props) => {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ReactQueryKeys.baseAll(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: ReactQueryKeys.recentlyBase(),
       });
     },
   });
@@ -84,9 +90,16 @@ export const BaseCard: FC<IBaseCard> = (props) => {
     });
   };
 
-  const hasReadPermission = hasPermission(base.role, 'base|read');
-  const hasUpdatePermission = hasPermission(base.role, 'base|update');
-  const hasDeletePermission = hasPermission(base.role, 'base|delete');
+  const hasUpdatePermission = base.restrictedAuthority
+    ? false
+    : hasPermission(base.role, 'base|update');
+  const hasDeletePermission = base.restrictedAuthority
+    ? false
+    : hasPermission(base.role, 'base|delete');
+  const hasMovePermission = base.restrictedAuthority
+    ? false
+    : hasPermission(base.role, 'space|create');
+
   return (
     <Card
       className={cn('relative group cursor-pointer hover:shadow-md overflow-x-hidden', className)}
@@ -132,13 +145,18 @@ export const BaseCard: FC<IBaseCard> = (props) => {
               id={base.id}
               type={PinType.Base}
             />
-            <div className="shrink-0">
+            <div
+              className="shrink-0"
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
               <BaseActionTrigger
                 base={base}
                 showRename={hasUpdatePermission}
                 showDuplicate={hasUpdatePermission}
                 showDelete={hasDeletePermission}
                 showExport={hasUpdatePermission}
+                showMove={hasMovePermission}
                 onDelete={() => deleteBaseMutator(base.id)}
                 onRename={onRename}
               >

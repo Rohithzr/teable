@@ -226,7 +226,7 @@
       "calculating": "Вычисление...",
       "doSaveChanges": "Вы хотите сохранить внесенные изменения?",
       "linkFieldToLookup": "Связанное поле записи для поиска",
-      "lookupToTable": "Поле {{tableName}}, которое вы хотите искать",
+      "lookupToTable": "Поле из {{tableName}}, которое вы хотите искать",
       "selectField": "Выберите поле...",
       "linkTable": "Связать таблицу",
       "noLinkTip": "Нет связанных записей для поиска. Добавьте поле Ссылка на другую запись, затем попробуйте настроить поиск снова.",
@@ -277,7 +277,9 @@
         "improvement": "Улучшение",
         "tag": "Смарт-тег",
         "classification": "Смарт-классификация",
-        "customization": "Настройка"
+        "customization": "Настройка",
+        "imageGeneration": "Генерация изображений",
+        "rating": "Оценка изображений"
       },
       "label": {
         "type": "Тип действия AI",
@@ -287,7 +289,11 @@
         "sourceFieldForTag": "Выберите поле, сопоставьте его с созданными тегами",
         "sourceFieldForClassify": "Выберите поле, сопоставьте его с созданными классификациями",
         "attachPrompt": "Прикрепить требования",
-        "prompt": "Настройка подсказки"
+        "prompt": "Настройка подсказки",
+        "sourceFieldForAttachment": "Исходное поле для вложения",
+        "imageSize": "Размер изображения",
+        "imageQuality": "Качество изображения",
+        "imageCount": "Количество изображений"
       },
       "placeholder": {
         "summarize": "Сводка содержимого",
@@ -299,7 +305,16 @@
         "attachPrompt": "Пожалуйста, введите дополнительные требования",
         "prompt": "Пожалуйста, введите пользовательскую подсказку",
         "type": "Выберите действие AI",
-        "targetLanguage": "Английский, китайский, французский..."
+        "targetLanguage": "Английский, китайский, французский...",
+        "imageSize": "Пожалуйста, введите размер изображения",
+        "imageQuality": "Пожалуйста, введите качество изображения",
+        "attachPromptForImageGeneration": "Изображение должно быть ярким и естественным",
+        "attachPromptForRating": "Оцените качество изображения"
+      },
+      "imageQuality": {
+        "low": "Низкое",
+        "medium": "Среднее",
+        "high": "Высокое"
       },
       "autoFill": {
         "title": "Автоматическое обновление",
@@ -516,7 +531,12 @@
     "hideField": "Скрыть поле",
     "deleteField": "Удалить поле",
     "deleteAllSelectedFields": "Удалить все выбранные поля",
-    "autoFill": "Обновить все записи"
+    "autoFill": "Обновить все записи",
+    "groupMenuTitle": "Меню группы",
+    "expandGroup": "Развернуть эту группу и ее подгруппы",
+    "collapseGroup": "Свернуть эту группу и ее подгруппы",
+    "expandAllGroups": "Развернуть все группы",
+    "collapseAllGroups": "Свернуть все группы"
   },
   "connection": {
     "title": "Подключение к базе данных",
@@ -560,5 +580,48 @@
     "title": "Корзина таблицы",
     "resourceType": "Тип ресурса",
     "deletedResource": "Удаленный ресурс"
+  },
+  "aiChat": {
+    "tool": {
+      "getTableFields": "Получить поля таблицы",
+      "getTablesMeta": "Получить метаданные таблицы",
+      "sqlQuery": "Выполнить SQL запрос",
+      "generateScriptAction": "Сгенерировать действие скрипта",
+      "getScriptInput": "Получить входные данные скрипта",
+      "getTeableApi": "Получить API",
+      "args": "Аргументы",
+      "result": "Результат"
+    },
+    "codeBlock": {
+      "hiddenLines": "{{count}} строк скрыто",
+      "collapseCode": "Свернуть код",
+      "code": "Код",
+      "preview": "Предварительный просмотр"
+    },
+    "newChat": "Новый чат",
+    "noModel": "Нет доступных моделей",
+    "noHistory": "Нет истории чата",
+    "noFoundHistory": "Нет истории чата, пожалуйста, начните новую беседу",
+    "timeGroup": {
+      "today": "Сегодня",
+      "oneWeek": "Одна неделя",
+      "twoWeek": "Две недели",
+      "oneMonth": "Один месяц",
+      "other": "Другое"
+    },
+    "context": {
+      "button": "Добавить контекст",
+      "search": "Добавить таблицы",
+      "searchEmpty": "Не найден соответствующий контекст",
+      "emptyContext": "Нет контекста для добавления"
+    },
+    "inputPlaceholder": "Отправить сообщение...",
+    "thought": "Мысли",
+    "meta": {
+      "timeCostUnit": "s",
+      "timeCostDescription": "Время генерации: {{timeCost}}s",
+      "creditDescription": "{{credits}} кредитов использовано",
+      "tokenDescription": "Токенов использовано: {{tokens}}"
+    }
   }
 }

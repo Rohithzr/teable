@@ -43,7 +43,18 @@
       "helperExample": "例: ",
       "fieldValue": "{{fieldName}}フィールドのセルに値を返します。",
       "placeholder": "数式を入力",
-      "placeholderForAI": "数式を入力するか、//を入力してAIで生成"
+      "placeholderForAIPrompt": "生成したい数式を記述してください",
+      "editExpression": "数式を編集",
+      "generateExpressionByAI": "AIで数式を生成",
+      "inputPrompt": "入力指示",
+      "generateExpression": "生成数式",
+      "generatingByAI": "AIで数式を生成中...",
+      "generatedExpressionTips": "生成後、適用ボタンをクリックして数式を挿入します",
+      "action": {
+        "generating": "生成中...",
+        "generate": "生成",
+        "apply": "適用"
+      }
     },
     "link": {
       "placeholder": "リンクするレコードを選択",
@@ -127,6 +138,7 @@
         "daysAgo": "日前",
         "daysFromNow": "日後",
         "exactDate": "正確な日付",
+        "exactFormatDate": "正確な日付（フォーマット）",
         "pastWeek": "先週",
         "pastMonth": "先月",
         "pastYear": "去年",
@@ -145,7 +157,12 @@
     "short": "低",
     "medium": "中",
     "tall": "高",
-    "extraTall": "超高"
+    "extraTall": "超高",
+    "title": "行高配置"
+  },
+  "fieldNameConfig": {
+    "title": "列名配置",
+    "displayLines": "{{count}} 行"
   },
   "share": {
     "title": "共有"
@@ -709,6 +726,35 @@
       "delete": "削除",
       "linkText": "リンクテキスト",
       "enterUrl": "URLを入力"
+    }
+  },
+  "httpErrors": {
+    "validationError": "バリデーションエラー",
+    "invalidCaptcha": "キャプチャが無効です",
+    "invalidCredentials": "無効な資格情報",
+    "unauthorized": "承認されていません",
+    "unauthorizedShare": "共有が承認されていません",
+    "paymentRequired": "支払いが必要です",
+    "restrictedResource": "制限されたリソース",
+    "notFound": "見つかりません",
+    "conflict": "競合",
+    "unprocessableEntity": "処理不可",
+    "userLimitExceeded": "ユーザーの制限超過",
+    "tooManyRequests": "要求が多すぎます",
+    "internalServerError": "内部サーバーエラー",
+    "databaseConnectionUnavailable": "データベース接続不可",
+    "gatewayTimeout": "ゲートウェイタイムアウト",
+    "unknownErrorCode": "不明なエラーコード",
+    "viewNotFound": "ビューが見つかりません",
+    "requestTimeout": "要求タイムアウト",
+    "failedDependency": "依存操作失敗",
+    "custom": {
+      "fieldValueNotNull": "\"{{tableName}}\" フィールド \"{{fieldName}}\" は空の値を許可しません。送信する前に完全に入力してください。",
+      "fieldValueDuplicate": "\"{{tableName}}\" フィールド \"{{fieldName}}\" は重複する値を許可しません。送信する前に一意の値を入力してください。",
+      "linkFieldValueDuplicate": "\"{{fieldName}}\" フィールドは同じレコードに複数の関連付けを許可しません。",
+      "requestTimeout": "操作範囲が大きすぎます。範囲を縮小して再試行してください。",
+      "searchTimeOut": "検索が期限切れ、検索範囲を狭めて再試行してください。",
+      "dependencyNodeRequire": "依存ノードがテストされていません。前のノードをテストしてください。"
     }
   }
 }

@@ -71,7 +71,18 @@
       "helperExample": "示例：",
       "fieldValue": "返回 {{fieldName}} 字段的值.",
       "placeholder": "请输入公式",
-      "placeholderForAI": "请输入公式或输入以 // 开头的注释使用 AI 生成公式"
+      "placeholderForAIPrompt": "请描述你想生成的公式",
+      "editExpression": "编辑公式",
+      "generateExpressionByAI": "AI 生成公式",
+      "inputPrompt": "输入指令",
+      "generateExpression": "生成公式",
+      "generatingByAI": "AI 正在生成公式中...",
+      "generatedExpressionTips": "生成后，点击应用即可快速插入公式",
+      "action": {
+        "generating": "生成中...",
+        "generate": "生成",
+        "apply": "应用"
+      }
     },
     "link": {
       "placeholder": "选择要链接的记录",
@@ -159,6 +170,7 @@
         "daysAgo": "几天前",
         "daysFromNow": "几天后",
         "exactDate": "具体日期",
+        "exactFormatDate": "具体日期（格式化）",
         "currentWeek": "本周",
         "currentMonth": "本月",
         "currentYear": "今年",
@@ -186,7 +198,12 @@
     "short": "低",
     "medium": "中等",
     "tall": "高",
-    "extraTall": "超高"
+    "extraTall": "超高",
+    "title": "行高配置"
+  },
+  "fieldNameConfig": {
+    "title": "列名配置",
+    "displayLines": "{{count}} 行"
   },
   "share": {
     "title": "分享"
@@ -752,5 +769,34 @@
     "noSelected": "未选择",
     "empty": "暂无成员",
     "emptyDepartment": "暂无部门"
+  },
+  "httpErrors": {
+    "validationError": "数据校验错误",
+    "invalidCaptcha": "验证码无效",
+    "invalidCredentials": "凭证无效",
+    "unauthorized": "令牌无效",
+    "unauthorizedShare": "无权限执行此操作",
+    "paymentRequired": "需要支付才能完成此操作",
+    "restrictedResource": "此资源受限",
+    "notFound": "请求的资源不存在或未共享",
+    "conflict": "请求因与当前资源状态冲突而无法完成",
+    "unprocessableEntity": "请求体与预期参数不匹配",
+    "userLimitExceeded": "已达到在当前实例中创建用户的限制",
+    "tooManyRequests": "已超出当前实例的请求限制",
+    "internalServerError": "发生意外错误",
+    "databaseConnectionUnavailable": "数据库当前不可用",
+    "gatewayTimeout": "服务器未及时收到上游服务器的响应",
+    "unknownErrorCode": "发生未知错误",
+    "requestTimeout": "请求超时",
+    "viewNotFound": "请求的视图不存在",
+    "failedDependency": "依赖操作失败",
+    "custom": {
+      "fieldValueNotNull": "\"{{tableName}}\" 中的 \"{{fieldName}}\" 字段不允许空值，请填写完整再提交",
+      "fieldValueDuplicate": "\"{{tableName}}\" 中的 \"{{fieldName}}\" 字段不允许重复值，请填写唯一值再提交",
+      "linkFieldValueDuplicate": "\"{{fieldName}}\" 字段不允许重复关联同一条记录",
+      "requestTimeout": "当前操作范围过大，请缩小范围重新尝试",
+      "searchTimeOut": "搜索超时，请尝试减少搜索范围重试",
+      "dependencyNodeRequire": "依赖节点未测试，请检查前置节点是否通过测试"
+    }
   }
 }

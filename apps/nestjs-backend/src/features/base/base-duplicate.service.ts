@@ -145,13 +145,15 @@ export class BaseDuplicateService {
       },
     });
 
-    const structure = await this.baseExportService.generateBaseStructJson({
+    const structure = await this.baseExportService.generateBaseStructConfig({
       baseRaw,
       tableRaws,
       fieldRaws,
       viewRaws,
       allowCrossBase,
     });
+
+    this.logger.log(`base-duplicate-service: Start to getting base structure config successfully`);
 
     const {
       base: newBase,

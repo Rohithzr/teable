@@ -1,11 +1,12 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
+import type { ICustomHttpExceptionData } from '@teable/core';
 import { ErrorCodeToStatusMap, HttpErrorCode } from '@teable/core';
 
 export class CustomHttpException extends HttpException {
   code: string;
-  data?: unknown;
+  data?: ICustomHttpExceptionData;
 
-  constructor(message: string, code: HttpErrorCode, data?: unknown) {
+  constructor(message: string, code: HttpErrorCode, data?: ICustomHttpExceptionData) {
     super(message, ErrorCodeToStatusMap[code]);
     this.code = code;
     this.data = data;
@@ -30,6 +31,8 @@ export const getDefaultCodeByStatus = (status: HttpStatus) => {
       return HttpErrorCode.INTERNAL_SERVER_ERROR;
     case HttpStatus.SERVICE_UNAVAILABLE:
       return HttpErrorCode.DATABASE_CONNECTION_UNAVAILABLE;
+    case HttpStatus.REQUEST_TIMEOUT:
+      return HttpErrorCode.REQUEST_TIMEOUT;
     default:
       return HttpErrorCode.UNKNOWN_ERROR_CODE;
   }

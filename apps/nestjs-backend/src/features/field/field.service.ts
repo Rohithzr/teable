@@ -19,7 +19,7 @@ import {
   checkFieldValidationEnabled,
 } from '@teable/core';
 import type { Field as RawField, Prisma } from '@teable/db-main-prisma';
-import { PrismaService, wrapWithValidationErrorHandler } from '@teable/db-main-prisma';
+import { PrismaService } from '@teable/db-main-prisma';
 import { instanceToPlain } from 'class-transformer';
 import { Knex } from 'knex';
 import { keyBy, sortBy } from 'lodash';
@@ -31,6 +31,7 @@ import { IDbProvider } from '../../db-provider/db.provider.interface';
 import type { IReadonlyAdapterService } from '../../share-db/interface';
 import { RawOpType } from '../../share-db/interface';
 import type { IClsStore } from '../../types/cls';
+import { handleDBValidationErrors } from '../../utils/db-validation-error';
 import { isNotHiddenField } from '../../utils/is-not-hidden-field';
 import { convertNameToValidCharacter } from '../../utils/name-conversion';
 import { BatchService } from '../calculation/batch.service';
@@ -231,7 +232,15 @@ export class FieldService implements IReadonlyAdapterService {
 
   private async alterTableAddField(dbTableName: string, fieldInstances: IFieldInstance[]) {
     for (let i = 0; i < fieldInstances.length; i++) {
-      const { dbFieldType, dbFieldName, type, isLookup, unique, notNull } = fieldInstances[i];
+      const {
+        dbFieldType,
+        dbFieldName,
+        type,
+        isLookup,
+        unique,
+        notNull,
+        id: fieldId,
+      } = fieldInstances[i];
 
       const alterTableQuery = this.knex.schema
         .alterTable(dbTableName, (table) => {
@@ -250,7 +259,9 @@ export class FieldService implements IReadonlyAdapterService {
 
         const fieldValidationQuery = this.knex.schema
           .alterTable(dbTableName, (table) => {
-            table.unique(dbFieldName);
+            table.unique([dbFieldName], {
+              indexName: this.getFieldUniqueKeyName(dbTableName, dbFieldName, fieldId),
+            });
           })
           .toQuery();
         await this.prismaService.txClient().$executeRawUnsafe(fieldValidationQuery);
@@ -301,9 +312,17 @@ export class FieldService implements IReadonlyAdapterService {
   }
 
   private async alterTableModifyFieldType(fieldId: string, newDbFieldType: DbFieldType) {
-    const { dbFieldName, table } = await this.prismaService.txClient().field.findFirstOrThrow({
+    const {
+      dbFieldName,
+      name: fieldName,
+      table,
+    } = await this.prismaService.txClient().field.findFirstOrThrow({
       where: { id: fieldId, deletedTime: null },
-      select: { dbFieldName: true, table: { select: { dbTableName: true } } },
+      select: {
+        dbFieldName: true,
+        name: true,
+        table: { select: { dbTableName: true, name: true } },
+      },
     });
 
     const dbTableName = table.dbTableName;
@@ -312,7 +331,6 @@ export class FieldService implements IReadonlyAdapterService {
     const resetFieldQuery = this.knex(dbTableName)
       .update({ [dbFieldName]: null })
       .toQuery();
-    await this.prismaService.txClient().$executeRawUnsafe(resetFieldQuery);
 
     const modifyColumnSql = this.dbProvider.modifyColumnSchema(
       dbTableName,
@@ -320,9 +338,53 @@ export class FieldService implements IReadonlyAdapterService {
       schemaType
     );
 
-    for (const alterTableQuery of modifyColumnSql) {
-      await this.prismaService.txClient().$executeRawUnsafe(alterTableQuery);
-    }
+    await handleDBValidationErrors({
+      fn: async () => {
+        await this.prismaService.txClient().$executeRawUnsafe(resetFieldQuery);
+
+        for (const alterTableQuery of modifyColumnSql) {
+          await this.prismaService.txClient().$executeRawUnsafe(alterTableQuery);
+        }
+      },
+      handleUniqueError: () => {
+        throw new CustomHttpException(
+          `Field ${fieldId} unique validation failed`,
+          HttpErrorCode.VALIDATION_ERROR,
+          {
+            localization: {
+              i18nKey: 'httpErrors.custom.fieldValueDuplicate',
+              context: { tableName: table.name, fieldName },
+            },
+          }
+        );
+      },
+      handleNotNullError: () => {
+        throw new CustomHttpException(
+          `Field ${fieldId} not null validation failed`,
+          HttpErrorCode.VALIDATION_ERROR,
+          {
+            localization: {
+              i18nKey: 'httpErrors.custom.fieldValueNotNull',
+              context: { tableName: table.name, fieldName },
+            },
+          }
+        );
+      },
+    });
+  }
+
+  async findUniqueIndexesForField(dbTableName: string, dbFieldName: string, fieldId: string) {
+    const indexesQuery = this.dbProvider.getTableIndexes(dbTableName);
+    const indexes = await this.prismaService
+      .txClient()
+      .$queryRawUnsafe<{ name: string }[]>(indexesQuery);
+    return indexes
+      .filter(
+        (index) =>
+          index.name.includes(`${dbFieldName.toLowerCase()}_unique`) ||
+          index.name.includes(`${fieldId.toLowerCase()}_unique`)
+      )
+      .map((index) => index.name);
   }
 
   private async alterTableModifyFieldValidation(
@@ -330,15 +392,16 @@ export class FieldService implements IReadonlyAdapterService {
     key: 'unique' | 'notNull',
     newValue?: boolean
   ) {
-    const { dbFieldName, table, type, isLookup } = await this.prismaService
+    const { name, dbFieldName, table, type, isLookup } = await this.prismaService
       .txClient()
       .field.findFirstOrThrow({
         where: { id: fieldId, deletedTime: null },
         select: {
+          name: true,
           dbFieldName: true,
           type: true,
           isLookup: true,
-          table: { select: { dbTableName: true } },
+          table: { select: { dbTableName: true, name: true } },
         },
       });
 
@@ -347,19 +410,59 @@ export class FieldService implements IReadonlyAdapterService {
     }
 
     const dbTableName = table.dbTableName;
+    const matchedIndexes = await this.findUniqueIndexesForField(dbTableName, dbFieldName, fieldId);
 
-    const fieldValidationQuery = this.knex.schema
+    const fieldValidationSqls = this.knex.schema
       .alterTable(dbTableName, (table) => {
         if (key === 'unique') {
-          newValue ? table.unique(dbFieldName) : table.dropUnique([dbFieldName]);
+          newValue
+            ? table.unique([dbFieldName], {
+                indexName: this.getFieldUniqueKeyName(dbTableName, dbFieldName, fieldId),
+              })
+            : matchedIndexes.forEach((indexName) => table.dropUnique([dbFieldName], indexName));
         }
 
         if (key === 'notNull') {
           newValue ? table.dropNullable(dbFieldName) : table.setNullable(dbFieldName);
         }
       })
-      .toQuery();
-    await this.prismaService.txClient().$executeRawUnsafe(fieldValidationQuery);
+      .toSQL();
+
+    const executeSqls = fieldValidationSqls
+      .filter((s) => !s.sql.startsWith('PRAGMA'))
+      .map(({ sql }) => sql);
+
+    await handleDBValidationErrors({
+      fn: () => {
+        return Promise.all(
+          executeSqls.map((sql) => this.prismaService.txClient().$executeRawUnsafe(sql))
+        );
+      },
+      handleUniqueError: () => {
+        throw new CustomHttpException(
+          `Field ${fieldId} unique validation failed`,
+          HttpErrorCode.VALIDATION_ERROR,
+          {
+            localization: {
+              i18nKey: 'httpErrors.custom.fieldValueDuplicate',
+              context: { tableName: table.name, fieldName: name },
+            },
+          }
+        );
+      },
+      handleNotNullError: () => {
+        throw new CustomHttpException(
+          `Field ${fieldId} not null validation failed`,
+          HttpErrorCode.VALIDATION_ERROR,
+          {
+            localization: {
+              i18nKey: 'httpErrors.custom.fieldValueNotNull',
+              context: { tableName: table.name, fieldName: name },
+            },
+          }
+        );
+      },
+    });
   }
 
   async getField(tableId: string, fieldId: string): Promise<IFieldVo> {
@@ -655,9 +758,7 @@ export class FieldService implements IReadonlyAdapterService {
     }
 
     if (key === 'dbFieldType') {
-      await wrapWithValidationErrorHandler(() =>
-        this.alterTableModifyFieldType(fieldId, newValue as DbFieldType)
-      );
+      await this.alterTableModifyFieldType(fieldId, newValue as DbFieldType);
     }
 
     if (key === 'dbFieldName') {
@@ -665,9 +766,7 @@ export class FieldService implements IReadonlyAdapterService {
     }
 
     if (key === 'unique' || key === 'notNull') {
-      await wrapWithValidationErrorHandler(() =>
-        this.alterTableModifyFieldValidation(fieldId, key, newValue as boolean | undefined)
-      );
+      await this.alterTableModifyFieldValidation(fieldId, key, newValue as boolean | undefined);
     }
 
     return { [key]: newValue ?? null };
@@ -726,5 +825,13 @@ export class FieldService implements IReadonlyAdapterService {
     return {
       ids: result.map((field) => field.id),
     };
+  }
+
+  getFieldUniqueKeyName(dbTableName: string, dbFieldName: string, fieldId: string) {
+    const [schema, tableName] = this.dbProvider.splitTableName(dbTableName);
+    // unique key suffix
+    const uniqueKeySuffix = `___${fieldId}_unique`;
+    const uniqueKeyPrefix = `${schema}_${tableName}`.slice(0, 63 - uniqueKeySuffix.length);
+    return `${uniqueKeyPrefix.toLowerCase()}${uniqueKeySuffix.toLowerCase()}`;
   }
 }

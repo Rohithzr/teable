@@ -33,6 +33,7 @@ import { useTranslation } from 'next-i18next';
 import { useState } from 'react';
 import { useEnv } from '@/features/app/hooks/useEnv';
 import { BaseSelectPanel } from './BaseSelectPanel';
+import { MarkdownEditor } from './MarkdownEditor';
 import { TemplateCategorySelect } from './TemplateCategorySelect';
 import { TemplateCover } from './TemplateCover';
 import { TemplateTooltips } from './TemplateTooltips';
@@ -107,6 +108,10 @@ export const TemplateTable = () => {
     updateTemplateFn({ templateId, updateRo: { categoryId: templateCategoryId } });
   };
 
+  const onChangeTemplateMarkdownDescription = (templateId: string, markdownDescription: string) => {
+    updateTemplateFn({ templateId, updateRo: { markdownDescription } });
+  };
+
   const { mutateAsync: pinTopTemplateFn } = useMutation({
     mutationFn: (templateId: string) => pinTopTemplate(templateId),
     onSuccess: () => {
@@ -115,16 +120,19 @@ export const TemplateTable = () => {
   });
 
   return (
-    <div className="mt-2">
-      <Table className="max-h-50 relative size-full scroll-smooth rounded-sm border">
-        <TableHeader className="z-10 border bg-background">
-          <TableRow className="sticky top-0 z-10 h-16 border bg-background">
+    <div>
+      <Table className="max-h-50 relative size-full scroll-smooth rounded-sm">
+        <TableHeader className="z-50 bg-background">
+          <TableRow className="sticky top-0 z-10 h-16 border-none bg-background">
             <TableHead>{t('settings.templateAdmin.header.cover')}</TableHead>
             <TableHead className="w-40 shrink-0">
               {t('settings.templateAdmin.header.name')}
             </TableHead>
             <TableHead className="w-52 max-w-52 shrink-0">
               {t('settings.templateAdmin.header.description')}
+            </TableHead>
+            <TableHead className="w-52 max-w-52 shrink-0">
+              {t('settings.templateAdmin.header.markdownDescription')}
             </TableHead>
             <TableHead>{t('settings.templateAdmin.header.category')}</TableHead>
             <TableHead className="min-w-24 text-center">
@@ -170,6 +178,14 @@ export const TemplateTable = () => {
                   value={row.description}
                   onChange={(value) => {
                     onChangeTemplateDescription(row.id, value);
+                  }}
+                />
+              </TableCell>
+              <TableCell className="max-w-48">
+                <MarkdownEditor
+                  value={row.markdownDescription}
+                  onChange={(value) => {
+                    onChangeTemplateMarkdownDescription(row.id, value);
                   }}
                 />
               </TableCell>
@@ -223,9 +239,11 @@ export const TemplateTable = () => {
                 </TemplateTooltips>
               </TableCell>
               <TableCell>
-                {row.snapshot?.snapshotTime
-                  ? dayjs(row.snapshot.snapshotTime).format('YYYY-MM-DD HH:mm:ss')
-                  : t('settings.templateAdmin.noData')}
+                {row.snapshot?.snapshotTime ? (
+                  dayjs(row.snapshot.snapshotTime).format('YYYY-MM-DD HH:mm:ss')
+                ) : (
+                  <span className="text-gray-500">{t('settings.templateAdmin.noData')}</span>
+                )}
               </TableCell>
               <TableCell className="text-center">
                 <TemplateTooltips

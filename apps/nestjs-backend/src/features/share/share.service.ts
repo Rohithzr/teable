@@ -9,7 +9,7 @@ import {
 import type { IFilter, IFieldVo, IViewVo, ILinkFieldOptions, StatisticsFunc } from '@teable/core';
 import { FieldKeyType, FieldType, ViewType } from '@teable/core';
 import { PrismaService } from '@teable/db-main-prisma';
-import { UploadType, ShareViewLinkRecordsType, PluginPosition } from '@teable/openapi';
+import { ShareViewLinkRecordsType, PluginPosition } from '@teable/openapi';
 import type {
   IShareViewCalendarDailyCollectionRo,
   ShareViewFormSubmitRo,
@@ -36,8 +36,7 @@ import { IDbProvider } from '../../db-provider/db.provider.interface';
 import type { IClsStore } from '../../types/cls';
 import { isNotHiddenField } from '../../utils/is-not-hidden-field';
 import { AggregationService } from '../aggregation/aggregation.service';
-import StorageAdapter from '../attachments/plugins/adapter';
-import { getFullStorageUrl } from '../attachments/plugins/utils';
+import { getPublicFullStorageUrl } from '../attachments/plugins/utils';
 import { CollaboratorService } from '../collaborator/collaborator.service';
 import { FieldService } from '../field/field.service';
 import type { IFieldInstance } from '../field/model/factory';
@@ -189,9 +188,12 @@ export class ShareService {
     }
 
     const { id } = view ?? {};
-    const { filterByViewId, filter } = linkOptions ?? {};
+    const { filterByViewId } = linkOptions ?? {};
     const viewId = filterByViewId ?? id;
     const tableId = shareInfo.tableId;
+    // if filterLinkCellSelected is not empty, use it as filter
+    const defaultFilter = linkOptions?.filter ?? query?.filter;
+    const filter = query?.filterLinkCellSelected ? undefined : defaultFilter;
     const result = await this.aggregationService.performRowCount(tableId, {
       viewId,
       filter,
@@ -447,7 +449,7 @@ export class ShareService {
       userId: id,
       email,
       userName: name,
-      avatar: avatar && getFullStorageUrl(StorageAdapter.getBucket(UploadType.Avatar), avatar),
+      avatar: avatar && getPublicFullStorageUrl(avatar),
     }));
   }
 

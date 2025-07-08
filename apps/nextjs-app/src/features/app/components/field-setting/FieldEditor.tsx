@@ -58,15 +58,17 @@ export const FieldEditor = (props: {
         ...field,
         type: FieldType.SingleLineText, // reset fieldType to default
         options: undefined, // reset options
-        aiConfig: null,
+        aiConfig: undefined,
         isLookup: true,
         unique: undefined,
         notNull: undefined,
       });
     }
 
-    let options: IFieldOptionsRo | undefined = getFieldStatic(type, false, false)
-      .defaultOptions as IFieldOptionsRo;
+    let options: IFieldOptionsRo | undefined = getFieldStatic(type, {
+      isLookup: false,
+      hasAiConfig: false,
+    }).defaultOptions as IFieldOptionsRo;
 
     if (
       [field.type, type].every((t) =>
@@ -81,7 +83,7 @@ export const FieldEditor = (props: {
       type,
       isLookup: undefined,
       lookupOptions: undefined,
-      aiConfig: null,
+      aiConfig: undefined,
       options,
       unique: checkFieldUniqueValidationEnabled(type, field.isLookup) ? field.unique : undefined,
       notNull:
@@ -173,7 +175,7 @@ export const FieldEditor = (props: {
             className="h-12 resize-none"
             value={field['description'] || undefined}
             placeholder={t('table:field.editor.descriptionPlaceholder')}
-            onChange={(e) => updateFieldProps({ description: e.target.value || undefined })}
+            onChange={(e) => updateFieldProps({ description: e.target.value || null })}
           />
         </div>
       )}

@@ -1,54 +1,18 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import type { IRecord } from '@teable/core';
 import { RecordCore, FieldKeyType, RecordOpBuilder, FieldType } from '@teable/core';
-import type {
-  ICreateRecordsRo,
-  IGetRecordsRo,
-  IRecordInsertOrderRo,
-  IUpdateRecordRo,
-  IUpdateRecordsRo,
-} from '@teable/openapi';
-import {
-  createRecords,
-  duplicateRecord,
-  getRecords,
-  updateRecord,
-  updateRecordOrders,
-  updateRecords,
-} from '@teable/openapi';
-import { isEqual } from 'lodash';
+import { updateRecord } from '@teable/openapi';
+import { toast } from '@teable/ui-lib/src/shadcn/ui/sonner';
+import { isEqual, isEmpty } from 'lodash';
 import type { Doc } from 'sharedb/lib/client';
-import { requestWrap } from '../../utils/requestWrap';
+import { getHttpErrorMessage } from '../../context';
+import type { ILocaleFunction } from '../../context/app/i18n';
 import type { IFieldInstance } from '../field/factory';
 
 export class Record extends RecordCore {
   private _title?: {
     value?: string;
   };
-
-  static createRecords = requestWrap((tableId: string, recordsRo: ICreateRecordsRo) =>
-    createRecords(tableId, recordsRo)
-  );
-
-  static getRecords = requestWrap((tableId: string, query?: IGetRecordsRo) =>
-    getRecords(tableId, query)
-  );
-
-  static updateRecord = requestWrap(
-    (tableId: string, recordId: string, recordRo: IUpdateRecordRo) =>
-      updateRecord(tableId, recordId, recordRo)
-  );
-
-  static updateRecords = requestWrap((tableId: string, recordsRo: IUpdateRecordsRo) =>
-    updateRecords(tableId, recordsRo)
-  );
-
-  static duplicateRecord = requestWrap(
-    (tableId: string, recordId: string, order: IRecordInsertOrderRo) =>
-      duplicateRecord(tableId, recordId, order)
-  );
-
-  static updateRecordOrders = requestWrap(updateRecordOrders);
 
   constructor(
     protected doc: Doc<IRecord>,
@@ -72,6 +36,28 @@ export class Record extends RecordCore {
       };
     }
     return this._title.value;
+  }
+
+  static isLocked(permissions: Record['permissions'], fieldId: string) {
+    if (!isEmpty(permissions)) {
+      return !permissions?.update?.[fieldId];
+    }
+    return false;
+  }
+
+  static isHidden(permissions: Record['permissions'], fieldId: string) {
+    if (!isEmpty(permissions)) {
+      return !permissions?.read?.[fieldId];
+    }
+    return false;
+  }
+
+  isLocked(fieldId: string) {
+    return Record.isLocked(this.permissions, fieldId);
+  }
+
+  isHidden(fieldId: string) {
+    return Record.isHidden(this.permissions, fieldId);
   }
 
   private onCommitLocal(fieldId: string, cellValue: unknown, undo?: boolean) {
@@ -102,13 +88,17 @@ export class Record extends RecordCore {
     this.doc.emit('op batch', [], false);
   };
 
-  async updateCell(fieldId: string, cellValue: unknown) {
+  async updateCell(
+    fieldId: string,
+    cellValue: unknown,
+    localization?: { t: ILocaleFunction; prefix?: string }
+  ) {
     const oldCellValue = this.fields[fieldId];
     try {
       this.onCommitLocal(fieldId, cellValue);
       this.fields[fieldId] = cellValue;
       const [, tableId] = this.doc.collection.split('_');
-      const res = await Record.updateRecord(tableId, this.doc.id, {
+      const res = await updateRecord(tableId, this.doc.id, {
         fieldKeyType: FieldKeyType.Id,
         record: {
           fields: {
@@ -126,6 +116,11 @@ export class Record extends RecordCore {
       }
     } catch (error) {
       this.onCommitLocal(fieldId, oldCellValue, true);
+
+      if (error instanceof Error && localization) {
+        toast.error(getHttpErrorMessage(error, localization.t, localization.prefix));
+      }
+
       return error;
     }
   }

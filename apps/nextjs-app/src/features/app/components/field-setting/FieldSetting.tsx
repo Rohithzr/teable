@@ -1,10 +1,8 @@
-import { useQueryClient } from '@tanstack/react-query';
 import type { IFieldRo } from '@teable/core';
 import { convertFieldRoSchema, FieldType, getOptionsSchema } from '@teable/core';
 import { Share2 } from '@teable/icons';
-import { planFieldCreate, type IPlanFieldConvertVo, planFieldConvert } from '@teable/openapi';
-import { ReactQueryKeys } from '@teable/sdk/config';
-import { useTable, useView } from '@teable/sdk/hooks';
+import { type IPlanFieldConvertVo } from '@teable/openapi';
+import { useTable, useTableId, useView, useFieldOperations } from '@teable/sdk/hooks';
 import { ConfirmDialog, Spin } from '@teable/ui-lib/base';
 import {
   Dialog,
@@ -30,15 +28,15 @@ import { FieldOperator } from './type';
 export const FieldSetting = (props: IFieldSetting) => {
   const { operator, order } = props;
 
-  const table = useTable();
   const view = useView();
+  const tableId = useTableId() as string;
   const getDefaultFieldName = useDefaultFieldName();
+  const { createField, convertField, planFieldCreate, planFieldConvert } = useFieldOperations();
 
   const [graphVisible, setGraphVisible] = useState<boolean>(false);
   const [processVisible, setProcessVisible] = useState<boolean>(false);
   const [plan, setPlan] = useState<IPlanFieldConvertVo>();
   const [fieldRo, setFieldRo] = useState<IFieldRo>();
-  const queryClient = useQueryClient();
   const { t } = useTranslation(tableConfig.i18nNamespaces);
 
   const onCancel = () => {
@@ -47,7 +45,7 @@ export const FieldSetting = (props: IFieldSetting) => {
 
   const createNewField = async (field: IFieldRo) => {
     const fieldName = field.name ?? (await getDefaultFieldName(field));
-    return await table?.createField({ ...field, name: fieldName });
+    return await createField({ tableId, fieldRo: { ...field, name: fieldName } });
   };
 
   const performAction = async (field: IFieldRo) => {
@@ -75,7 +73,7 @@ export const FieldSetting = (props: IFieldSetting) => {
 
       if (operator === FieldOperator.Edit) {
         const fieldId = props.field?.id;
-        table && fieldId && (await table.convertField(fieldId, field));
+        tableId && fieldId && (await convertField({ tableId, fieldId, fieldRo: field }));
       }
 
       toast(
@@ -92,20 +90,10 @@ export const FieldSetting = (props: IFieldSetting) => {
 
   const getPlan = async (fieldRo: IFieldRo) => {
     if (operator === FieldOperator.Edit) {
-      return queryClient.ensureQueryData({
-        queryKey: ReactQueryKeys.planFieldConvert(
-          table?.id as string,
-          props.field?.id as string,
-          fieldRo
-        ),
-        queryFn: ({ queryKey }) =>
-          planFieldConvert(queryKey[1], queryKey[2], queryKey[3]).then((data) => data.data),
-      });
+      return (await planFieldConvert({ tableId, fieldId: props.field?.id as string, fieldRo }))
+        .data;
     }
-    return queryClient.ensureQueryData({
-      queryKey: ReactQueryKeys.planFieldCreate(table?.id as string, fieldRo),
-      queryFn: ({ queryKey }) => planFieldCreate(queryKey[1], queryKey[2]),
-    });
+    return (await planFieldCreate({ tableId, fieldRo })).data;
   };
 
   const onConfirm = async (fieldRo?: IFieldRo) => {
@@ -128,17 +116,13 @@ export const FieldSetting = (props: IFieldSetting) => {
     <>
       <FieldSettingBase {...props} onCancel={onCancel} onConfirm={onConfirm} />
       <ConfirmDialog
-        contentClassName="max-w-4xl"
+        contentClassName="max-w-6xl"
         title={t('table:field.editor.previewDependenciesGraph')}
         open={graphVisible}
         onOpenChange={setGraphVisible}
         content={
           <>
-            <DynamicFieldGraph
-              tableId={table?.id as string}
-              fieldId={props.field?.id}
-              fieldRo={fieldRo}
-            />
+            <DynamicFieldGraph tableId={tableId} fieldId={props.field?.id} fieldRo={fieldRo} />
             <p className="text-sm">{t('table:field.editor.areYouSurePerformIt')}</p>
           </>
         }
@@ -287,7 +271,7 @@ const FieldSettingBase = (props: IFieldSettingBase) => {
                         <Share2 className="size-4" /> {t('table:field.editor.graph')}
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-4xl">
+                    <DialogContent className="max-w-6xl">
                       <DynamicFieldGraph
                         tableId={table?.id as string}
                         fieldId={props.field?.id}

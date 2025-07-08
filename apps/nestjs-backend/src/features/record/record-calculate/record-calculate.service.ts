@@ -32,13 +32,15 @@ export class RecordCalculateService {
 
   async multipleCreateRecords(
     tableId: string,
-    createRecordsRo: ICreateRecordsRo
+    createRecordsRo: ICreateRecordsRo,
+    projection?: string[]
   ): Promise<ICreateRecordsVo> {
     return await this.prismaService.$tx(async () => {
       return await this.createRecords(
         tableId,
         createRecordsRo.records,
-        createRecordsRo.fieldKeyType
+        createRecordsRo.fieldKeyType,
+        projection
       );
     });
   }
@@ -57,7 +59,11 @@ export class RecordCalculateService {
     );
 
     const fieldRaws = await this.prismaService.txClient().field.findMany({
-      where: { tableId, [fieldKeyType]: { in: fieldKeys } },
+      where: {
+        tableId,
+        [fieldKeyType]: { in: fieldKeys },
+        deletedTime: null,
+      },
       select: { id: true, name: true, dbFieldName: true },
     });
     const fieldIdMap = keyBy(fieldRaws, fieldKeyType);
@@ -105,11 +111,10 @@ export class RecordCalculateService {
 
     const opsMapByLink = cellChanges.length ? formatChangesToOps(cellChanges) : {};
     const manualOpsMap = composeOpMaps([opsMapOrigin, opsMapByLink]);
-
     // ops in current table should not be apply or calculated for delete
     if (recordIdsForDelete) {
       for (const recordId of recordIdsForDelete) {
-        delete manualOpsMap[tableId][recordId];
+        delete manualOpsMap?.[tableId]?.[recordId];
       }
     }
 
@@ -313,7 +318,8 @@ export class RecordCalculateService {
   async createRecords(
     tableId: string,
     recordsRo: IMakeOptional<IRecordInnerRo, 'id'>[],
-    fieldKeyType: FieldKeyType = FieldKeyType.Name
+    fieldKeyType: FieldKeyType = FieldKeyType.Name,
+    projection?: string[]
   ): Promise<ICreateRecordsVo> {
     if (recordsRo.length === 0) {
       throw new BadRequestException('Create records is empty');
@@ -349,14 +355,14 @@ export class RecordCalculateService {
 
     const recordIds = plainRecords.map((r) => r.id);
 
-    await this.fieldCalculationService.calComputedFieldsByRecordIds(tableId, recordIds);
-
     await this.calculateUpdatedRecord(tableId, fieldKeyType, plainRecords, true);
 
-    const snapshots = await this.recordService.getSnapshotBulk(
+    await this.fieldCalculationService.calComputedFieldsByRecordIds(tableId, recordIds);
+
+    const snapshots = await this.recordService.getSnapshotBulkWithPermission(
       tableId,
       recordIds,
-      undefined,
+      this.recordService.convertProjection(projection),
       fieldKeyType
     );
 

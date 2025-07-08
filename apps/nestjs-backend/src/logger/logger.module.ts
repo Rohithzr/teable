@@ -6,13 +6,14 @@ import { ClsService } from 'nestjs-cls';
 import { LoggerModule as BaseLoggerModule } from 'nestjs-pino';
 import type { ILoggerConfig } from '../configs/logger.config';
 import { X_REQUEST_ID } from '../const';
+import type { IClsStore } from '../types/cls';
 
 @Module({})
 export class LoggerModule {
   static register(): DynamicModule {
     return BaseLoggerModule.forRootAsync({
       inject: [ClsService, ConfigService],
-      useFactory: (cls: ClsService, config: ConfigService) => {
+      useFactory: (cls: ClsService<IClsStore>, config: ConfigService) => {
         const { level } = config.getOrThrow<ILoggerConfig>('logger');
 
         return {
@@ -44,7 +45,16 @@ export class LoggerModule {
                 const span = trace.getSpan(context.active());
                 if (!span) return { ...object };
                 const { traceId, spanId } = span.spanContext();
-                return { ...object, spanId, traceId };
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const sessionId = (object as any)?.res?.req?.sessionID;
+                return {
+                  ...object,
+                  is_access_token: Boolean(cls.get('accessTokenId')),
+                  user_id: cls.get('user.id'),
+                  session_id: sessionId,
+                  spanId,
+                  traceId,
+                };
               },
             },
           },

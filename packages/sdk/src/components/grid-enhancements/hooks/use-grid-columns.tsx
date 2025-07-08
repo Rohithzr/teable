@@ -15,7 +15,7 @@ import {
   onMixedTextClick,
 } from '../..';
 import { useTranslation } from '../../../context/app/i18n/useTranslation';
-import { useFields, useView, useFieldCellEditable } from '../../../hooks';
+import { useFields, useTablePermission, useView } from '../../../hooks';
 import type { IFieldInstance, NumberField, Record } from '../../../model';
 import type { GridView } from '../../../model/view';
 import { getFilterFieldIds } from '../../filter/view-filter/utils';
@@ -165,12 +165,15 @@ const useGenerateColumns = () => {
   );
 };
 
-export const useCreateCellValue2GridDisplay = (rowHeight?: RowHeightLevel) => {
+export const useCreateCellValue2GridDisplay = (
+  rowHeight?: RowHeightLevel,
+  recordEditable?: boolean
+) => {
   const { t } = useTranslation();
   const i18nMap = useAttachmentPreviewI18Map();
 
   return useCallback(
-    (fields: IFieldInstance[], editable: (field: IFieldInstance) => boolean) =>
+    (fields: IFieldInstance[]) =>
       (
         record: Record,
         col: number,
@@ -193,9 +196,21 @@ export const useCreateCellValue2GridDisplay = (rowHeight?: RowHeightLevel) => {
         let cellValue = record.getCellValue(fieldId);
         const validateCellValue = field.validateCellValue(cellValue);
         cellValue = validateCellValue.success ? validateCellValue.data : undefined;
-        const readonly = isComputed || (!editable(field) && !isPrefilling);
+        const recordReadOnly = !recordEditable && !isPrefilling;
+        const fieldLocked = record.isLocked(fieldId) && !isPrefilling;
+        const readonly = isComputed || recordReadOnly || fieldLocked;
         const cellId = `${record.id}-${fieldId}`;
-        const baseCellProps = { id: cellId, readonly };
+        const baseCellProps = { id: cellId, readonly, locked: fieldLocked };
+        const isHidden = record.isHidden(fieldId);
+        if (isHidden) {
+          return {
+            ...baseCellProps,
+            type: CellType.Text,
+            data: '',
+            displayData: '',
+            hidden: true,
+          };
+        }
 
         switch (type) {
           case FieldType.SingleLineText: {
@@ -255,7 +270,6 @@ export const useCreateCellValue2GridDisplay = (rowHeight?: RowHeightLevel) => {
               type: CellType.Text,
               data: (cellValue as string) || '',
               displayData,
-              editorWidth: 250,
               customEditor: (props, editorRef) => (
                 <GridDateEditor ref={editorRef} field={field} record={record} {...props} />
               ),
@@ -483,7 +497,7 @@ export const useCreateCellValue2GridDisplay = (rowHeight?: RowHeightLevel) => {
           }
         }
       },
-    [i18nMap, rowHeight, t]
+    [i18nMap, recordEditable, rowHeight, t]
   );
 };
 
@@ -491,12 +505,12 @@ export function useGridColumns(hasMenu?: boolean, hiddenFieldIds?: string[]) {
   const view = useView() as GridView | undefined;
   const originFields = useFields();
   const totalFields = useFields({ withHidden: true, withDenied: true });
-  const fieldEditable = useFieldCellEditable();
   const { resolvedTheme } = useTheme();
   const sort = view?.sort;
   const group = view?.group;
   const filter = view?.filter;
   const isAutoSort = sort && !sort?.manualSort;
+  const permission = useTablePermission();
 
   const fields = useMemo(() => {
     const hiddenSet = new Set(hiddenFieldIds ?? []);
@@ -525,7 +539,10 @@ export function useGridColumns(hasMenu?: boolean, hiddenFieldIds?: string[]) {
     if (filter == null) return;
     return getFilterFieldIds(filter?.filterSet, keyBy(totalFields, 'id'));
   }, [filter, totalFields]);
-  const createCellValue2GridDisplay = useCreateCellValue2GridDisplay(view?.options?.rowHeight);
+  const createCellValue2GridDisplay = useCreateCellValue2GridDisplay(
+    view?.options?.rowHeight,
+    permission['record|update']
+  );
   const generateColumns = useGenerateColumns();
   return useMemo(
     () => ({
@@ -538,7 +555,7 @@ export function useGridColumns(hasMenu?: boolean, hiddenFieldIds?: string[]) {
         groupFieldIds,
         filterFieldIds,
       }),
-      cellValue2GridDisplay: createCellValue2GridDisplay(fields, fieldEditable),
+      cellValue2GridDisplay: createCellValue2GridDisplay(fields),
     }),
     [
       fields,
@@ -550,7 +567,6 @@ export function useGridColumns(hasMenu?: boolean, hiddenFieldIds?: string[]) {
       filterFieldIds,
       generateColumns,
       createCellValue2GridDisplay,
-      fieldEditable,
     ]
   );
 }

@@ -232,7 +232,7 @@
       "calculating": "Calculating...",
       "doSaveChanges": "Do you want to save the changes you made?",
       "linkFieldToLookup": "Linked record field to use for lookup",
-      "lookupToTable": "{{tableName}} field you want to look up",
+      "lookupToTable": "Field from {{tableName}} you want to look up",
       "selectField": "Select a field...",
       "linkTable": "Link table",
       "linkBase": "Link base",
@@ -286,7 +286,9 @@
         "improvement": "Improve",
         "tag": "Smart-Tag",
         "classification": "Smart-Classify",
-        "customization": "Customize"
+        "customization": "Customize",
+        "imageGeneration": "Image Generation",
+        "rating": "Rating"
       },
       "label": {
         "type": "AI Action Type",
@@ -296,7 +298,11 @@
         "sourceFieldForTag": "Select a field, match it with the created tags",
         "sourceFieldForClassify": "Select a field, match it with the created classifications",
         "attachPrompt": "Attach Requirements",
-        "prompt": "Customize Prompt"
+        "prompt": "Customize Prompt",
+        "sourceFieldForAttachment": "Source Field for Attachment",
+        "imageSize": "Image Size",
+        "imageQuality": "Image Quality",
+        "imageCount": "Image Count"
       },
       "placeholder": {
         "summarize": "Summary of the content",
@@ -304,11 +310,20 @@
         "extractInfo": "Extract email, phone, name, address...",
         "improveText": "Formal, friendly, humorous...",
         "attachPromptForTag": "Not allowed to exceed three tags",
-        "attachPromptForClassify": "Classify “In Progress” as “No Risk”",
+        "attachPromptForClassify": "Classify \"In Progress\" as \"No Risk\"",
         "attachPrompt": "Please enter additional requirements",
         "prompt": "Please enter a custom prompt",
         "type": "Select AI Action",
-        "targetLanguage": "English, Chinese, French..."
+        "targetLanguage": "English, Chinese, French...",
+        "imageSize": "Please enter the image size",
+        "imageQuality": "Please enter the image quality",
+        "attachPromptForImageGeneration": "The image should be vivid and natural",
+        "attachPromptForRating": "Rate the image quality"
+      },
+      "imageQuality": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High"
       },
       "autoFill": {
         "title": "Auto Update",
@@ -538,7 +553,12 @@
     "filterField": "Filter by this field",
     "sortField": "Sort by this field",
     "groupField": "Group by this field",
-    "autoFill": "Update all records"
+    "autoFill": "Update all records",
+    "groupMenuTitle": "Group Menu",
+    "expandGroup": "Expand this group and its sub-groups",
+    "collapseGroup": "Collapse this group and its sub-groups",
+    "expandAllGroups": "Expand all groups",
+    "collapseAllGroups": "Collapse all groups"
   },
   "connection": {
     "title": "Database Connection",
@@ -613,5 +633,54 @@
     "noPlugin": "No Context menu plugins",
     "delete": "Delete",
     "deleteDescription": "Are you sure you want to delete this plugin?"
+  },
+  "permission": {
+    "cell": {
+      "deniedRead": "You don't have permission to view this cell",
+      "deniedUpdate": "You don't have permission to update this cell"
+    }
+  },
+  "aiChat": {
+    "tool": {
+      "getTableFields": "Get table fields",
+      "getTablesMeta": "Get tables meta",
+      "sqlQuery": "Execute SQL query",
+      "generateScriptAction": "Generate script action",
+      "getScriptInput": "Get script input",
+      "getTeableApi": "Get API",
+      "args": "Arguments",
+      "result": "Result"
+    },
+    "codeBlock": {
+      "hiddenLines": "{{count}} lines hidden",
+      "collapseCode": "Collapse code",
+      "code": "Code",
+      "preview": "Preview"
+    },
+    "newChat": "New Chat",
+    "noModel": "No available models",
+    "noHistory": "No chat history",
+    "noFoundHistory": "No chat history found, please start a new conversation",
+    "timeGroup": {
+      "today": "Today",
+      "oneWeek": "One week",
+      "twoWeek": "Two week",
+      "oneMonth": "One month",
+      "other": "Other"
+    },
+    "context": {
+      "button": "Add context",
+      "search": "Add tables",
+      "searchEmpty": "No matching context found",
+      "emptyContext": "No context to add"
+    },
+    "inputPlaceholder": "Send message...",
+    "thought": "Thinking",
+    "meta": {
+      "timeCostUnit": "s",
+      "timeCostDescription": "Generation time: {{timeCost}}s",
+      "creditDescription": "{{credits}} credits consumed",
+      "tokenDescription": "Tokens used: {{tokens}}"
+    }
   }
 }

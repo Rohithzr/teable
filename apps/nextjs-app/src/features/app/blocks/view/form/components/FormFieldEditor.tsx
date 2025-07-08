@@ -29,7 +29,10 @@ export const FormFieldEditor: FC<IFormFieldEditorProps> = (props) => {
   if (!view || !tableId) return null;
 
   const { type, name, description, isComputed, isLookup, id: fieldId, aiConfig } = field;
-  const Icon = getFieldStatic(type, isLookup, Boolean(aiConfig)).Icon;
+  const Icon = getFieldStatic(type, {
+    isLookup,
+    hasAiConfig: Boolean(aiConfig),
+  }).Icon;
 
   const onHidden = (event: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
     event.stopPropagation();
@@ -54,7 +57,7 @@ export const FormFieldEditor: FC<IFormFieldEditorProps> = (props) => {
     ]);
   };
 
-  const required = view.columnMeta[fieldId]?.required;
+  const required = field.notNull || view.columnMeta[fieldId]?.required;
 
   return (
     <div className="relative w-full px-8 py-5">
@@ -73,6 +76,7 @@ export const FormFieldEditor: FC<IFormFieldEditorProps> = (props) => {
                 id="form-field-required"
                 className="ml-1 mr-2"
                 checked={required}
+                disabled={field.notNull}
                 onCheckedChange={onRequiredChange}
               />
             </div>

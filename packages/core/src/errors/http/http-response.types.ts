@@ -28,10 +28,14 @@ export enum HttpErrorCode {
   RESTRICTED_RESOURCE = 'restricted_resource',
   // 404 - Given the bearer token used, the resource does not exist. This error can also indicate that the resource has not been shared with owner of the bearer token.
   NOT_FOUND = 'not_found',
+  // 408 - Requset timeout
+  REQUEST_TIMEOUT = 'request_timeout',
   // 409 - The request could not be completed due to a conflict with the current state of the resource.
   CONFLICT = 'conflict',
   // 422 - The request body does not match the schema for the expected parameters
   UNPROCESSABLE_ENTITY = 'unprocessable_entity',
+  // 424 - The request failed because it depended on another request and that request failed.
+  FAILED_DEPENDENCY = 'failed_dependency',
   // 460 - The user has reached the limit of the number of users that can be created in the current instance.
   USER_LIMIT_EXCEEDED = 'user_limit_exceeded',
   // 429 - The user has reached the limit of the number of requests that can be made in the current instance.
@@ -47,3 +51,12 @@ export enum HttpErrorCode {
   /** view */
   VIEW_NOT_FOUND = 'view_not_found',
 }
+
+export type ICustomHttpExceptionLocalization<T = string> = {
+  i18nKey: T;
+  context?: Record<string, unknown>;
+};
+
+export type ICustomHttpExceptionData<T = string> = Record<string, unknown> & {
+  localization?: ICustomHttpExceptionLocalization<T>;
+};

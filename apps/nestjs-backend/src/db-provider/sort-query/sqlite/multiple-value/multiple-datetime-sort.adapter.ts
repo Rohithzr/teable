@@ -1,4 +1,4 @@
-import type { DateFormattingPreset, IDateFieldOptions } from '@teable/core';
+import { TimeFormatting, type DateFormattingPreset, type IDateFieldOptions } from '@teable/core';
 import type { Knex } from 'knex';
 import { getSqliteDateTimeFormatString } from '../../../group-query/format-string';
 import { getOffset } from '../../../search-query/get-offset';
@@ -11,15 +11,26 @@ export class MultipleDateTimeSortAdapter extends SortFunctionSqlite {
     const formatString = getSqliteDateTimeFormatString(date as DateFormattingPreset, time);
     const offsetString = `${getOffset(timeZone)} hour`;
 
-    const orderByColumn = this.knex.raw(
-      `
+    const orderByColumn =
+      time === TimeFormatting.None
+        ? this.knex.raw(
+            `
       (
         SELECT group_concat(strftime(?, DATETIME(elem.value, ?)), ', ')
         FROM json_each(??) as elem
       ) ASC NULLS FIRST
       `,
-      [formatString, offsetString, this.columnName]
-    );
+            [formatString, offsetString, this.columnName]
+          )
+        : this.knex.raw(
+            `
+      (
+        SELECT group_concat(elem.value, ', ')
+        FROM json_each(??) as elem
+      ) ASC NULLS FIRST
+      `,
+            [this.columnName]
+          );
     builderClient.orderByRaw(orderByColumn);
     return builderClient;
   }
@@ -30,15 +41,26 @@ export class MultipleDateTimeSortAdapter extends SortFunctionSqlite {
     const formatString = getSqliteDateTimeFormatString(date as DateFormattingPreset, time);
     const offsetString = `${getOffset(timeZone)} hour`;
 
-    const orderByColumn = this.knex.raw(
-      `
+    const orderByColumn =
+      time === TimeFormatting.None
+        ? this.knex.raw(
+            `
       (
         SELECT group_concat(strftime(?, DATETIME(elem.value, ?)), ', ')
         FROM json_each(??) as elem
       ) DESC NULLS LAST
       `,
-      [formatString, offsetString, this.columnName]
-    );
+            [formatString, offsetString, this.columnName]
+          )
+        : this.knex.raw(
+            `
+      (
+        SELECT group_concat(elem.value, ', ')
+        FROM json_each(??) as elem
+      ) DESC NULLS LAST
+      `,
+            [this.columnName]
+          );
     builderClient.orderByRaw(orderByColumn);
     return builderClient;
   }
@@ -49,17 +71,31 @@ export class MultipleDateTimeSortAdapter extends SortFunctionSqlite {
     const formatString = getSqliteDateTimeFormatString(date as DateFormattingPreset, time);
     const offsetString = `${getOffset(timeZone)} hour`;
 
-    return this.knex
-      .raw(
-        `
+    if (time === TimeFormatting.None) {
+      return this.knex
+        .raw(
+          `
         (
           SELECT group_concat(strftime(?, DATETIME(elem.value, ?)), ', ')
           FROM json_each(??) as elem
         ) ASC NULLS FIRST
         `,
-        [formatString, offsetString, this.columnName]
-      )
-      .toQuery();
+          [formatString, offsetString, this.columnName]
+        )
+        .toQuery();
+    } else {
+      return this.knex
+        .raw(
+          `
+        (
+          SELECT group_concat(elem.value, ', ')
+          FROM json_each(??) as elem
+        ) ASC NULLS FIRST
+        `,
+          [this.columnName]
+        )
+        .toQuery();
+    }
   }
 
   getDescSQL() {
@@ -68,16 +104,30 @@ export class MultipleDateTimeSortAdapter extends SortFunctionSqlite {
     const formatString = getSqliteDateTimeFormatString(date as DateFormattingPreset, time);
     const offsetString = `${getOffset(timeZone)} hour`;
 
-    return this.knex
-      .raw(
-        `
+    if (time === TimeFormatting.None) {
+      return this.knex
+        .raw(
+          `
         (
           SELECT group_concat(strftime(?, DATETIME(elem.value, ?)), ', ')
           FROM json_each(??) as elem
         ) DESC NULLS LAST
         `,
-        [formatString, offsetString, this.columnName]
-      )
-      .toQuery();
+          [formatString, offsetString, this.columnName]
+        )
+        .toQuery();
+    } else {
+      return this.knex
+        .raw(
+          `
+        (
+          SELECT group_concat(elem.value, ', ')
+          FROM json_each(??) as elem
+        ) DESC NULLS LAST
+        `,
+          [this.columnName]
+        )
+        .toQuery();
+    }
   }
 }

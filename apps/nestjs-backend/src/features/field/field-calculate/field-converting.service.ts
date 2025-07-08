@@ -12,20 +12,24 @@ import type {
   IConvertFieldRo,
 } from '@teable/core';
 import {
+  CellValueType,
   ColorUtils,
   DbFieldType,
   FIELD_VO_PROPERTIES,
   FieldOpBuilder,
   FieldType,
   generateChoiceId,
+  HttpErrorCode,
   isMultiValueLink,
   PRIMARY_SUPPORTED_TYPES,
   RecordOpBuilder,
 } from '@teable/core';
-import { PrismaService, wrapWithValidationErrorHandler } from '@teable/db-main-prisma';
+import { PrismaService } from '@teable/db-main-prisma';
 import { Knex } from 'knex';
 import { difference, intersection, isEmpty, isEqual, keyBy, set } from 'lodash';
 import { InjectModel } from 'nest-knexjs';
+import { CustomHttpException } from '../../../custom.exception';
+import { handleDBValidationErrors } from '../../../utils/db-validation-error';
 import {
   majorFieldKeysChanged,
   majorOptionsKeyChanged,
@@ -40,6 +44,7 @@ import { formatChangesToOps } from '../../calculation/utils/changes';
 import type { IOpsMap } from '../../calculation/utils/compose-maps';
 import { composeOpMaps } from '../../calculation/utils/compose-maps';
 import { CollaboratorService } from '../../collaborator/collaborator.service';
+import { TableIndexService } from '../../table/table-index.service';
 import { FieldService } from '../field.service';
 import type { IFieldInstance, IFieldMap } from '../model/factory';
 import { createFieldInstanceByRaw, createFieldInstanceByVo } from '../model/factory';
@@ -67,6 +72,7 @@ export class FieldConvertingService {
     private readonly fieldSupplementService: FieldSupplementService,
     private readonly fieldCalculationService: FieldCalculationService,
     private readonly collaboratorService: CollaboratorService,
+    private readonly tableIndexService: TableIndexService,
     @InjectModel('CUSTOM_KNEX') private readonly knex: Knex
   ) {}
 
@@ -1104,14 +1110,25 @@ export class FieldConvertingService {
   }
 
   private needTempleCloseFieldConstraint(newField: IFieldInstance, oldField: IFieldInstance) {
-    return majorFieldKeysChanged(oldField, newField) && (oldField.unique || oldField.notNull);
+    return (
+      (majorFieldKeysChanged(oldField, newField) ||
+        newField.dbFieldName !== oldField.dbFieldName) &&
+      (oldField.unique || oldField.notNull)
+    );
   }
 
   async alterFieldConstraint(tableId: string, newField: IFieldInstance, oldField: IFieldInstance) {
-    const { dbTableName } = await this.prismaService.txClient().tableMeta.findUniqueOrThrow({
-      where: { id: tableId },
-      select: { dbTableName: true },
-    });
+    const { dbTableName, name: tableName } = await this.prismaService
+      .txClient()
+      .tableMeta.findUniqueOrThrow({
+        where: { id: tableId },
+        select: { dbTableName: true, name: true },
+      });
+
+    // index do not support date cell value type
+    if (newField.cellValueType !== CellValueType.DateTime) {
+      await this.tableIndexService.createSearchFieldSingleIndex(tableId, newField);
+    }
 
     if (!this.needTempleCloseFieldConstraint(newField, oldField)) {
       return;
@@ -1119,13 +1136,45 @@ export class FieldConvertingService {
     const { unique, notNull, dbFieldName } = newField;
     const fieldValidationQuery = this.knex.schema
       .alterTable(dbTableName, (table) => {
-        if (unique) table.unique(dbFieldName);
+        if (unique)
+          table.unique([dbFieldName], {
+            indexName: this.fieldService.getFieldUniqueKeyName(
+              dbTableName,
+              dbFieldName,
+              newField.id
+            ),
+          });
         if (notNull) table.dropNullable(dbFieldName);
       })
       .toQuery();
-    await wrapWithValidationErrorHandler(() =>
-      this.prismaService.txClient().$executeRawUnsafe(fieldValidationQuery)
-    );
+
+    await handleDBValidationErrors({
+      fn: () => this.prismaService.txClient().$executeRawUnsafe(fieldValidationQuery),
+      handleUniqueError: () => {
+        throw new CustomHttpException(
+          `Field ${oldField.id} unique validation failed`,
+          HttpErrorCode.VALIDATION_ERROR,
+          {
+            localization: {
+              i18nKey: 'httpErrors.custom.fieldValueDuplicate',
+              context: { fieldName: oldField.name, tableName },
+            },
+          }
+        );
+      },
+      handleNotNullError: () => {
+        throw new CustomHttpException(
+          `Field ${oldField.id} not null validation failed`,
+          HttpErrorCode.VALIDATION_ERROR,
+          {
+            localization: {
+              i18nKey: 'httpErrors.custom.fieldValueNotNull',
+              context: { fieldName: oldField.name, tableName },
+            },
+          }
+        );
+      },
+    });
   }
 
   async closeConstraint(tableId: string, newField: IFieldInstance, oldField: IFieldInstance) {
@@ -1134,20 +1183,36 @@ export class FieldConvertingService {
       select: { dbTableName: true },
     });
 
+    await this.tableIndexService.deleteSearchFieldIndex(tableId, oldField);
+
     const { unique, notNull, dbFieldName } = oldField;
 
     if (!this.needTempleCloseFieldConstraint(newField, oldField)) {
       return;
     }
 
+    const matchedIndexes = await this.fieldService.findUniqueIndexesForField(
+      dbTableName,
+      dbFieldName,
+      oldField.id
+    );
+
     const fieldValidationQuery = this.knex.schema
       .alterTable(dbTableName, (table) => {
-        if (unique) table.dropUnique([dbFieldName]);
+        if (unique) {
+          matchedIndexes.forEach((indexName) => table.dropUnique([dbFieldName], indexName));
+        }
         if (notNull) table.setNullable(dbFieldName);
       })
-      .toQuery();
+      .toSQL();
 
-    await this.prismaService.$executeRawUnsafe(fieldValidationQuery);
+    const executeSqls = fieldValidationQuery
+      .filter((s) => !s.sql.startsWith('PRAGMA'))
+      .map(({ sql }) => sql);
+
+    for (const sql of executeSqls) {
+      await this.prismaService.txClient().$executeRawUnsafe(sql);
+    }
   }
 
   async stageAnalysis(tableId: string, fieldId: string, updateFieldRo: IConvertFieldRo) {

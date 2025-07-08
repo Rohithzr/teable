@@ -43,7 +43,18 @@
       "helperExample": "Exemple : ",
       "fieldValue": "Renvoie la valeur aux cellules du champ {{fieldName}}.",
       "placeholder": "Entrez une expression",
-      "placeholderForAI": "Entrez une expression ou entrez // pour générer avec AI"
+      "placeholderForAIPrompt": "Décrivez la formule que vous souhaitez générer",
+      "editExpression": "Modifier la formule",
+      "generateExpressionByAI": "Générer la formule avec AI",
+      "inputPrompt": "Entrez une instruction",
+      "generateExpression": "Formule générée",
+      "generatingByAI": "Génération de la formule avec AI...",
+      "generatedExpressionTips": "Après génération, cliquez sur Appliquer pour insérer rapidement la formule",
+      "action": {
+        "generating": "Génération...",
+        "generate": "Générer",
+        "apply": "Appliquer"
+      }
     },
     "link": {
       "placeholder": "Sélectionner des enregistrements à lier",
@@ -125,6 +136,7 @@
         "daysAgo": "jours écoulés",
         "daysFromNow": "jours restants",
         "exactDate": "date exacte",
+        "exactFormatDate": "date exacte (formatée)",
         "pastWeek": "semaine passée",
         "pastMonth": "mois passé",
         "pastYear": "année passée",
@@ -143,7 +155,12 @@
     "short": "court",
     "medium": "moyen",
     "tall": "grand",
-    "extraTall": "très grand"
+    "extraTall": "très grand",
+    "title": "Configuration de la hauteur de ligne"
+  },
+  "fieldNameConfig": {
+    "title": "Configuration du nom de champ",
+    "displayLines": "{{count}} lignes"
   },
   "share": {
     "title": "partager"
@@ -722,6 +739,33 @@
       "delete": "Supprimer",
       "linkText": "Texte du lien",
       "enterUrl": "Entrez l'URL"
+    }
+  },
+  "httpErrors": {
+    "validationError": "Erreur de validation",
+    "invalidCaptcha": "Captcha invalide",
+    "invalidCredentials": "Identifiants invalides",
+    "unauthorized": "Non autorisé",
+    "unauthorizedShare": "Partage non autorisé",
+    "paymentRequired": "Paiement requis",
+    "restrictedResource": "Ressource restreinte",
+    "notFound": "Non trouvé",
+    "conflict": "Conflit",
+    "unprocessableEntity": "Entité non traitable",
+    "userLimitExceeded": "Limite de l'utilisateur dépassée",
+    "tooManyRequests": "Trop de requêtes",
+    "internalServerError": "Erreur interne du serveur",
+    "databaseConnectionUnavailable": "Connexion à la base de données non disponible",
+    "gatewayTimeout": "Temps d'attente de la passerelle",
+    "unknownErrorCode": "Code d'erreur inconnu",
+    "viewNotFound": "Vue non trouvée",
+    "requestTimeout": "Temps d'attente de la requête dépassé",
+    "custom": {
+      "fieldValueNotNull": "\"{{tableName}}\" champ \"{{fieldName}}\" ne permet pas les valeurs vides, veuillez les remplir complètement avant de soumettre.",
+      "fieldValueDuplicate": "\"{{tableName}}\" champ \"{{fieldName}}\" ne permet pas les valeurs dupliquées, veuillez remplir une valeur unique avant de soumettre.",
+      "linkFieldValueDuplicate": "\"{{fieldName}}\" champ ne permet pas les associations dupliquées avec le même enregistrement",
+      "requestTimeout": "L'action actuelle est trop grande, veuillez réessayer avec un étendue plus petite.",
+      "searchTimeOut": "La recherche a expiré, veuillez réduire l'ambito de la recherche et réessayer."
     }
   }
 }

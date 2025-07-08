@@ -1,11 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import type { RatingIcon } from '@teable/core';
-import { Check, DraggableHandle, Maximize2 } from '@teable/icons';
+import { Check, DraggableHandle, MagicAi, Maximize2 } from '@teable/icons';
 import { useMemo } from 'react';
 import { useFieldStaticGetter } from '../../../hooks/use-field-static-getter';
 import { FIELD_TYPE_ORDER, getSpriteMap } from '../../../utils';
 import { RATING_ICON_MAP } from '../../cell-value';
-import { MagicAI } from '../../comment/comment-editor/plate-ui/icons';
 import { RowControlType } from '../../grid/interface';
 
 export const useGridIcons = () => {
@@ -17,8 +16,14 @@ export const useGridIcons = () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         { type: string; IconComponent: React.JSXElementConstructor<any> }[]
       >((pre, type) => {
-        const IconComponent = getFieldStatic(type, false, false)?.Icon;
-        const LookupIconComponent = getFieldStatic(type, true, false)?.Icon;
+        const IconComponent = getFieldStatic(type, {
+          isLookup: false,
+          hasAiConfig: false,
+        })?.Icon;
+        const LookupIconComponent = getFieldStatic(type, {
+          isLookup: true,
+          hasAiConfig: false,
+        })?.Icon;
         pre.push({ type: type, IconComponent });
         if (LookupIconComponent) {
           pre.push({ type: `${type}_lookup`, IconComponent: LookupIconComponent });
@@ -49,7 +54,7 @@ export const useGridIcons = () => {
     const aiIcons = getSpriteMap([
       {
         type: 'ai',
-        IconComponent: MagicAI,
+        IconComponent: MagicAi,
       },
     ]);
     return {

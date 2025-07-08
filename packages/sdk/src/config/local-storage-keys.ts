@@ -21,4 +21,6 @@ export enum LocalStorageKeys {
   PinListExpanded = 'ls_pin_list_expanded',
   PluginPanel = 'ls_plugin_panel',
   InteractionMode = 'ls_interaction_mode',
+  ChatPanel = 'ls_chat_panel',
+  Chat = 'ls_chat',
 }

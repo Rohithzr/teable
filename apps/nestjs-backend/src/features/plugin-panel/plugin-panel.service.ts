@@ -4,6 +4,7 @@ import type { IBaseRole } from '@teable/core';
 import {
   generatePluginInstallId,
   generatePluginPanelId,
+  getUniqName,
   nullsToUndefined,
   Role,
 } from '@teable/core';
@@ -17,9 +18,13 @@ import type {
   IDashboardLayout,
   IPluginPanelUpdateStorageRo,
   IPluginPanelPluginItem,
+  IDuplicatePluginPanelRo,
+  IBaseJson,
+  IDuplicatePluginPanelInstalledPluginRo,
 } from '@teable/openapi';
 import { ClsService } from 'nestjs-cls';
 import type { IClsStore } from '../../types/cls';
+import { BaseImportService } from '../base/base-import.service';
 import { CollaboratorService } from '../collaborator/collaborator.service';
 
 @Injectable()
@@ -27,7 +32,8 @@ export class PluginPanelService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly cls: ClsService<IClsStore>,
-    private readonly collaboratorService: CollaboratorService
+    private readonly collaboratorService: CollaboratorService,
+    private readonly baseImportService: BaseImportService
   ) {}
 
   createPluginPanel(tableId: string, createPluginPanelRo: IPluginPanelCreateRo) {
@@ -361,5 +367,163 @@ export class PluginPanelService {
       pluginInstallId: pluginInstall.id,
       storage: pluginInstall.storage ? JSON.parse(pluginInstall.storage) : undefined,
     };
+  }
+
+  async duplicatePluginPanel(
+    tableId: string,
+    pluginPanelId: string,
+    duplicatePluginPanelRo: IDuplicatePluginPanelRo
+  ) {
+    const { name } = duplicatePluginPanelRo;
+    const pluginPanel = (await this.prismaService.txClient().pluginPanel.findFirstOrThrow({
+      where: {
+        tableId,
+        id: pluginPanelId,
+      },
+      select: {
+        id: true,
+        name: true,
+        layout: true,
+        tableId: true,
+      },
+    })) as IBaseJson['plugins'][PluginPosition.Panel][number];
+
+    const installedPlugins = await this.prismaService.txClient().pluginInstall.findMany({
+      where: {
+        positionId: pluginPanelId,
+        position: PluginPosition.Panel,
+      },
+      select: {
+        id: true,
+        name: true,
+        pluginId: true,
+        storage: true,
+        position: true,
+        positionId: true,
+        baseId: true,
+      },
+    });
+
+    pluginPanel.pluginInstall = installedPlugins.map((plugin) => ({
+      ...plugin,
+      position: PluginPosition.Panel,
+      storage: plugin.storage ? JSON.parse(plugin.storage) : {},
+    }));
+
+    pluginPanel.layout = pluginPanel.layout ? JSON.parse(pluginPanel.layout) : undefined;
+
+    const pluginPanelNames = await this.prismaService.txClient().pluginPanel.findMany({
+      where: {
+        tableId,
+      },
+      select: {
+        name: true,
+      },
+    });
+
+    const newName = getUniqName(
+      name ?? pluginPanel.name,
+      pluginPanelNames.map((item) => item.name)
+    );
+
+    pluginPanel.name = newName;
+
+    const baseId = installedPlugins[0].baseId;
+
+    return this.prismaService.$tx(async () => {
+      const { panelMap } = await this.baseImportService.createPanel(
+        baseId,
+        [pluginPanel],
+        { [tableId]: tableId },
+        {}
+      );
+
+      const newDashboardId = panelMap[pluginPanelId];
+
+      return {
+        id: newDashboardId,
+        name: newName,
+      };
+    });
+  }
+
+  async duplicatePluginPanelPlugin(
+    tableId: string,
+    pluginPanelId: string,
+    pluginInstallId: string,
+    duplicatePluginPanelInstalledPluginRo: IDuplicatePluginPanelInstalledPluginRo
+  ) {
+    const baseId = await this.getBaseId(tableId);
+
+    return this.prismaService.$tx(async () => {
+      const { name } = duplicatePluginPanelInstalledPluginRo;
+      const installedPlugins = await this.prismaService.txClient().pluginInstall.findFirstOrThrow({
+        where: {
+          baseId,
+          id: pluginInstallId,
+          position: PluginPosition.Panel,
+        },
+      });
+      const names = await this.prismaService.txClient().pluginInstall.findMany({
+        where: {
+          baseId,
+          positionId: pluginPanelId,
+          position: PluginPosition.Panel,
+        },
+        select: {
+          name: true,
+        },
+      });
+
+      const newName = getUniqName(
+        name ?? installedPlugins.name,
+        names.map((item) => item.name)
+      );
+
+      const newPluginInstallId = generatePluginInstallId();
+
+      await this.prismaService.txClient().pluginInstall.create({
+        data: {
+          ...installedPlugins,
+          id: newPluginInstallId,
+          name: newName,
+        },
+      });
+
+      const pluginPanel = await this.prismaService.txClient().pluginPanel.findFirstOrThrow({
+        where: {
+          tableId,
+          id: pluginPanelId,
+        },
+        select: {
+          layout: true,
+        },
+      });
+
+      const layout = pluginPanel.layout ? (JSON.parse(pluginPanel.layout) as IDashboardLayout) : [];
+
+      const sourceLayout = layout.find((item) => item.pluginInstallId === pluginInstallId);
+      layout.push({
+        pluginInstallId: newPluginInstallId,
+        x: (layout.length * 2) % 12,
+        y: Number.MAX_SAFE_INTEGER, // puts it at the bottom
+        w: sourceLayout?.w || 2,
+        h: sourceLayout?.h || 2,
+      });
+
+      await this.prismaService.txClient().pluginPanel.update({
+        where: {
+          id: pluginPanelId,
+        },
+        data: {
+          layout: JSON.stringify(layout),
+        },
+      });
+
+      return {
+        id: newPluginInstallId,
+        name: newName,
+      };
+    });
   }
 }

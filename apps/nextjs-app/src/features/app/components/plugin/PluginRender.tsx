@@ -17,6 +17,7 @@ interface IPluginRenderProps extends React.IframeHTMLAttributes<HTMLIFrameElemen
 }
 export const PluginRender = (props: IPluginRenderProps) => {
   const { onBridge, utilsEvent, uiEvent, className, ...rest } = props;
+
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   useEffect(() => {
     if (!iframeRef.current) {
@@ -55,8 +56,6 @@ export const PluginRender = (props: IPluginRenderProps) => {
     connection.promise.catch((error) => {
       throw error;
     });
-
-    connection;
 
     return () => {
       connection.destroy();

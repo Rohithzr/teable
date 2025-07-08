@@ -3,7 +3,7 @@
 /* eslint-disable sonarjs/cognitive-complexity */
 import type { INestApplication } from '@nestjs/common';
 import type { IFieldVo, IFilterRo, ILinkFieldOptions, IViewGroupRo, IViewVo } from '@teable/core';
-import { FieldType, ViewType, RowHeightLevel, SortFunc } from '@teable/core';
+import { FieldType, ViewType, RowHeightLevel, SortFunc, FieldKeyType } from '@teable/core';
 import type { IDuplicateTableVo, ITableFullVo } from '@teable/openapi';
 import {
   createField,
@@ -14,6 +14,8 @@ import {
   updateViewSort,
   updateViewGroup,
   updateViewOptions,
+  updateRecord,
+  getRecords,
 } from '@teable/openapi';
 import { omit } from 'lodash';
 import { x_20 } from './data-helpers/20x';
@@ -27,6 +29,7 @@ import {
   deleteField,
   createView,
   updateViewFilter,
+  convertField,
 } from './utils/init-app';
 
 describe('OpenAPI TableController for duplicate (e2e)', () => {
@@ -48,9 +51,40 @@ describe('OpenAPI TableController for duplicate (e2e)', () => {
     let duplicateTableData: IDuplicateTableVo;
     beforeAll(async () => {
       table = await createTable(baseId, {
-        name: 'record_query_x_20',
+        // over 63 characters
+        name: 'record_query_long_long_long_long_long_long_long_long_long_long_long_long',
         fields: x_20.fields,
         records: x_20.records,
+      });
+
+      const singleTextField = table.fields.find((f) => f.name === 'text field')!;
+
+      await updateRecord(table.id, table.records[22].id, {
+        fieldKeyType: FieldKeyType.Id,
+        record: {
+          fields: {
+            [singleTextField.id]: 'Text Field 21',
+          },
+        },
+      });
+
+      await updateRecord(table.id, table.records[0].id, {
+        fieldKeyType: FieldKeyType.Id,
+        record: {
+          fields: {
+            [singleTextField.id]: 'Text Field -1',
+          },
+        },
+      });
+
+      // convert field to notNull and unique, need to test constraint field duplicate
+      await convertField(table.id, singleTextField.id, {
+        dbFieldName: singleTextField.dbFieldName,
+        name: singleTextField.name,
+        options: singleTextField.options,
+        type: FieldType.SingleLineText,
+        notNull: true,
+        unique: true,
       });
 
       const x20Link = x_20_link(table);
@@ -58,6 +92,38 @@ describe('OpenAPI TableController for duplicate (e2e)', () => {
         name: 'lookup_filter_x_20',
         fields: x20Link.fields,
         records: x20Link.records,
+      });
+
+      const subTableLinkField = subTable.fields.find((f) => f.type === FieldType.Link)!;
+
+      const linkField = (
+        await createField(table.id, {
+          name: 'link field',
+          type: FieldType.Link,
+          options: {
+            foreignTableId: subTable.id,
+            relationship: 'manyMany',
+          },
+        })
+      ).data;
+
+      // test changed link field
+      await convertField(table.id, linkField.id, {
+        dbFieldName: `${linkField.dbFieldName}_converted`,
+        name: linkField.name,
+        options: linkField.options,
+        type: FieldType.Link,
+      });
+
+      await createField(table.id, {
+        isLookup: true,
+        lookupOptions: {
+          foreignTableId: subTable.id,
+          linkFieldId: linkField.id,
+          lookupFieldId: subTableLinkField.id,
+        },
+        name: 'lookup link field',
+        type: FieldType.Link,
       });
 
       const x20LinkFromLookups = x_20_link_from_lookups(table, subTable.fields[2].id);
@@ -104,7 +170,7 @@ describe('OpenAPI TableController for duplicate (e2e)', () => {
       const assertViews = JSON.parse(sourceViewsString) as IViewVo[];
 
       const assertLinkField = assertField
-        .filter(({ type }) => type === FieldType.Link)
+        .filter(({ type, isLookup }) => type === FieldType.Link && !isLookup)
         .map((f) => ({
           ...f,
           options: omit(
@@ -117,7 +183,7 @@ describe('OpenAPI TableController for duplicate (e2e)', () => {
           ),
         }));
       const duplicatedLinkField = targetFields
-        .filter(({ type }) => type === FieldType.Link)
+        .filter(({ type, isLookup }) => type === FieldType.Link && !isLookup)
         .map((f) => ({
           ...f,
           options: omit(
@@ -153,7 +219,6 @@ describe('OpenAPI TableController for duplicate (e2e)', () => {
         otherAssertFieldsWithOutLink.sort(sortById)
       );
     });
-
     // it.skip('should create a link field in linked table when link field is two-way-link', async () => {
     //   const fields = (await getFields(subTable.id)).data;
     //   const { fields: targetFields } = duplicateTableData;
@@ -558,6 +623,69 @@ describe('OpenAPI TableController for duplicate (e2e)', () => {
             options: omit(v.options, ['pluginId', 'pluginInstallId']),
           }))
       );
+    });
+  });
+
+  describe('duplicate formula field relative', () => {
+    let table: ITableFullVo;
+    let duplicateTableData: IDuplicateTableVo;
+    beforeAll(async () => {
+      table = await createTable(baseId, {
+        name: 'mainTable',
+      });
+
+      const numberField = table.fields.find((f) => f.type === FieldType.Number)!;
+
+      await createField(table.id, {
+        name: 'formulaField',
+        type: FieldType.Formula,
+        options: {
+          expression: `{${numberField.id}}`,
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+      });
+
+      await updateRecord(table.id, table.records[0].id, {
+        fieldKeyType: FieldKeyType.Id,
+        record: {
+          fields: {
+            [numberField.id]: 1,
+          },
+        },
+      });
+
+      duplicateTableData = (
+        await duplicateTable(baseId, table.id, {
+          name: 'duplicated_table',
+          includeRecords: true,
+        })
+      ).data;
+    });
+
+    afterAll(async () => {
+      await permanentDeleteTable(baseId, table.id);
+      await permanentDeleteTable(baseId, duplicateTableData.id);
+    });
+
+    it('should duplicate formula field calculate normally', async () => {
+      const { id, fields } = duplicateTableData;
+      const records = (await getRecords(id)).data.records;
+
+      const numberField = fields.find((f) => f.type === FieldType.Number)!;
+      const formulaField = fields.find((f) => f.type === FieldType.Formula)!;
+      expect(records[0].fields[formulaField.name]).toBe(1);
+      await updateRecord(id, records[2].id, {
+        fieldKeyType: FieldKeyType.Id,
+        record: {
+          fields: {
+            [numberField.id]: 3,
+          },
+        },
+      });
+
+      const newRecords = (await getRecords(id)).data.records;
+      expect(newRecords[0].fields[formulaField.name]).toBe(1);
+      expect(newRecords[2].fields[formulaField.name]).toBe(3);
     });
   });
 });

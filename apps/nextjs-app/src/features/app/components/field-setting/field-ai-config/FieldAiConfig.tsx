@@ -2,9 +2,8 @@
 import { useQuery } from '@tanstack/react-query';
 import type { IFieldAIConfig } from '@teable/core';
 import { FieldType } from '@teable/core';
-import { ChevronDown, ChevronRight, HelpCircle } from '@teable/icons';
+import { ChevronDown, ChevronRight, HelpCircle, MagicAi } from '@teable/icons';
 import { getAIConfig } from '@teable/openapi';
-import { MagicAI } from '@teable/sdk/components/comment/comment-editor/plate-ui/icons';
 import { useBaseId } from '@teable/sdk/hooks';
 import {
   cn,
@@ -18,11 +17,13 @@ import {
 import { useTranslation } from 'next-i18next';
 import React, { Fragment, useState } from 'react';
 import { AIModelSelect } from '@/features/app/blocks/admin/setting/components/ai-config/AiModelSelect';
-import { generateModelKeyList } from '@/features/app/blocks/admin/setting/components/ai-config/util';
+import { generateModelKeyList } from '@/features/app/blocks/admin/setting/components/ai-config/utils';
 import { useBaseUsage } from '@/features/app/hooks/useBaseUsage';
 import { tableConfig } from '@/features/i18n/table.config';
 import type { IFieldEditorRo } from '../type';
+import { AttachmentFieldAiConfig } from './AttachmentFieldAiConfig';
 import { MultipleSelectFieldAiConfig } from './MultipleSelectFieldAiConfig';
+import { RatingFieldAiConfig } from './RatingFieldAiConfig';
 import { SingleSelectFieldAiConfig } from './SingleSelectFieldAiConfig';
 import { TextFieldAiConfig } from './TextFieldAiConfig';
 
@@ -36,6 +37,9 @@ const SUPPORTED_FIELD_TYPES = new Set([
   FieldType.LongText,
   FieldType.SingleSelect,
   FieldType.MultipleSelect,
+  FieldType.Attachment,
+  FieldType.Rating,
+  FieldType.Number,
 ]);
 
 export const FieldAiConfig: React.FC<FieldAiConfigProps> = ({ field, onChange }) => {
@@ -81,6 +85,11 @@ export const FieldAiConfig: React.FC<FieldAiConfigProps> = ({ field, onChange })
         return <SingleSelectFieldAiConfig field={field} onChange={onChange} />;
       case FieldType.MultipleSelect:
         return <MultipleSelectFieldAiConfig field={field} onChange={onChange} />;
+      case FieldType.Attachment:
+        return <AttachmentFieldAiConfig field={field} onChange={onChange} />;
+      case FieldType.Rating:
+      case FieldType.Number:
+        return <RatingFieldAiConfig field={field} onChange={onChange} />;
       default:
         throw new Error(`Unsupported field type: ${fieldType}`);
     }
@@ -105,7 +114,7 @@ export const FieldAiConfig: React.FC<FieldAiConfigProps> = ({ field, onChange })
       onClick={() => setIsExpanded(!isExpanded)}
     >
       <div className="flex items-center gap-x-1">
-        <MagicAI className="size-4" active />
+        <MagicAi className="size-4 text-amber-500" />
         {t('table:field.aiConfig.title')}
       </div>
       {isExpanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
@@ -116,7 +125,7 @@ export const FieldAiConfig: React.FC<FieldAiConfigProps> = ({ field, onChange })
         <TooltipTrigger asChild>
           <div className="group flex cursor-not-allowed select-none items-center justify-between rounded-sm bg-muted px-3 py-2">
             <div className="flex items-center gap-x-1">
-              <MagicAI className="size-4 text-gray-500" />
+              <MagicAi className="size-4 text-gray-500" />
               {t('table:field.aiConfig.title')}
             </div>
             {isExpanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}

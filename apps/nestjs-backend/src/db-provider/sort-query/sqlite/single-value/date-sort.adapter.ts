@@ -1,4 +1,4 @@
-import type { IDateFieldOptions, DateFormattingPreset } from '@teable/core';
+import { type IDateFieldOptions, type DateFormattingPreset, TimeFormatting } from '@teable/core';
 import type { Knex } from 'knex';
 import { getSqliteDateTimeFormatString } from '../../../group-query/format-string';
 import { getOffset } from '../../../search-query/get-offset';
@@ -11,11 +11,16 @@ export class DateSortAdapter extends SortFunctionSqlite {
     const formatString = getSqliteDateTimeFormatString(date as DateFormattingPreset, time);
     const offsetString = `${getOffset(timeZone)} hour`;
 
-    builderClient.orderByRaw('strftime(?, DATETIME(??, ?)) ASC NULLS FIRST', [
-      formatString,
-      this.columnName,
-      offsetString,
-    ]);
+    if (time === TimeFormatting.None) {
+      builderClient.orderByRaw('strftime(?, DATETIME(??, ?)) ASC NULLS FIRST', [
+        formatString,
+        this.columnName,
+        offsetString,
+      ]);
+    } else {
+      builderClient.orderByRaw('?? ASC NULLS FIRST', [this.columnName]);
+    }
+
     return builderClient;
   }
 
@@ -25,11 +30,16 @@ export class DateSortAdapter extends SortFunctionSqlite {
     const formatString = getSqliteDateTimeFormatString(date as DateFormattingPreset, time);
     const offsetString = `${getOffset(timeZone)} hour`;
 
-    builderClient.orderByRaw('strftime(?, DATETIME(??, ?)) DESC NULLS LAST', [
-      formatString,
-      this.columnName,
-      offsetString,
-    ]);
+    if (time === TimeFormatting.None) {
+      builderClient.orderByRaw('strftime(?, DATETIME(??, ?)) DESC NULLS LAST', [
+        formatString,
+        this.columnName,
+        offsetString,
+      ]);
+    } else {
+      builderClient.orderByRaw('?? DESC NULLS LAST', [this.columnName]);
+    }
+
     return builderClient;
   }
 
@@ -39,13 +49,17 @@ export class DateSortAdapter extends SortFunctionSqlite {
     const formatString = getSqliteDateTimeFormatString(date as DateFormattingPreset, time);
     const offsetString = `${getOffset(timeZone)} hour`;
 
-    return this.knex
-      .raw('strftime(?, DATETIME(??, ?)) ASC NULLS FIRST', [
-        formatString,
-        this.columnName,
-        offsetString,
-      ])
-      .toQuery();
+    if (time === TimeFormatting.None) {
+      return this.knex
+        .raw('strftime(?, DATETIME(??, ?)) ASC NULLS FIRST', [
+          formatString,
+          this.columnName,
+          offsetString,
+        ])
+        .toQuery();
+    } else {
+      return this.knex.raw('?? ASC NULLS FIRST', [this.columnName]).toQuery();
+    }
   }
 
   getDescSQL() {
@@ -54,12 +68,16 @@ export class DateSortAdapter extends SortFunctionSqlite {
     const formatString = getSqliteDateTimeFormatString(date as DateFormattingPreset, time);
     const offsetString = `${getOffset(timeZone)} hour`;
 
-    return this.knex
-      .raw('strftime(?, DATETIME(??, ?)) DESC NULLS LAST', [
-        formatString,
-        this.columnName,
-        offsetString,
-      ])
-      .toQuery();
+    if (time === TimeFormatting.None) {
+      return this.knex
+        .raw('strftime(?, DATETIME(??, ?)) DESC NULLS LAST', [
+          formatString,
+          this.columnName,
+          offsetString,
+        ])
+        .toQuery();
+    } else {
+      return this.knex.raw('?? DESC NULLS LAST', [this.columnName]).toQuery();
+    }
   }
 }

@@ -18,7 +18,6 @@ import { TemplateOpenApiService } from './template-open-api.service';
 export class TemplateOpenApiController {
   constructor(private readonly templateOpenApiService: TemplateOpenApiService) {}
 
-  @Public()
   @Get()
   async getTemplateList() {
     return this.templateOpenApiService.getAllTemplateList();
@@ -76,6 +75,12 @@ export class TemplateOpenApiController {
     return this.templateOpenApiService.getTemplateCategoryList();
   }
 
+  @Public()
+  @Get('/category/list/published')
+  async getPublishedTemplateCategoryList() {
+    return this.templateOpenApiService.getPublishedTemplateCategoryList();
+  }
+
   @Delete('/category/:templateCategoryId')
   @Permissions('instance|update')
   async deleteTemplateCategory(@Param('templateCategoryId') templateCategoryId: string) {
@@ -95,8 +100,9 @@ export class TemplateOpenApiController {
     );
   }
 
-  @Patch('/:templateId/usage-count')
-  async updateTemplateUsageCount(@Param('templateId') templateId: string) {
-    return this.templateOpenApiService.updateTemplateUsageCount(templateId);
+  @Public()
+  @Get('/:templateId')
+  async getTemplateById(@Param('templateId') templateId: string) {
+    return this.templateOpenApiService.getTemplateDetailById(templateId);
   }
 }

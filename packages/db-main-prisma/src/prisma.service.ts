@@ -1,10 +1,9 @@
 import type { OnModuleInit } from '@nestjs/common';
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
-import type { Prisma } from '@prisma/client';
+import { Injectable, Logger } from '@nestjs/common';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { nanoid } from 'nanoid';
 import type { ClsService } from 'nestjs-cls';
-import { PostgresErrorCode, SqliteErrorCode } from './db.error';
+import { TimeoutHttpException } from './utils';
 
 interface ITx {
   client?: Prisma.TransactionClient;
@@ -13,30 +12,25 @@ interface ITx {
   rawOpMaps?: unknown;
 }
 
-export const wrapWithValidationErrorHandler = async (fn: () => Promise<unknown>) => {
-  try {
-    await fn();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (e: any) {
-    const code = e.meta?.code ?? e.code;
-    if (code === PostgresErrorCode.UNIQUE_VIOLATION || code === SqliteErrorCode.UNIQUE_VIOLATION) {
-      throw new HttpException(
-        'Duplicate detected! Please ensure that all fields with unique value validation are indeed unique.',
-        HttpStatus.BAD_REQUEST
-      );
-    }
-    if (
-      code === PostgresErrorCode.NOT_NULL_VIOLATION ||
-      code === SqliteErrorCode.NOT_NULL_VIOLATION
-    ) {
-      throw new HttpException(
-        'One or more required fields were not provided! Please ensure all mandatory fields are filled.',
-        HttpStatus.BAD_REQUEST
-      );
-    }
-    throw new HttpException(`An error occurred: ${e.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
-  }
-};
+function proxyClient(tx: Prisma.TransactionClient) {
+  return new Proxy(tx, {
+    get(target, p) {
+      if (p === '$queryRawUnsafe' || p === '$executeRawUnsafe') {
+        return async function (query: string, ...args: unknown[]) {
+          try {
+            return await target[p](query, ...args);
+          } catch (e: unknown) {
+            if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2028') {
+              throw new TimeoutHttpException();
+            }
+            throw e;
+          }
+        };
+      }
+      return target[p as keyof typeof target];
+    },
+  });
+}
 
 @Injectable()
 export class PrismaService
@@ -101,6 +95,7 @@ export class PrismaService
 
     await this.cls.runWith(this.cls.get(), async () => {
       result = await super.$transaction<R>(async (prisma) => {
+        prisma = proxyClient(prisma);
         this.cls.set('tx.client', prisma);
         this.cls.set('tx.id', nanoid());
         this.cls.set('tx.timeStr', new Date().toISOString());

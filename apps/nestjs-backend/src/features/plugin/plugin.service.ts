@@ -25,7 +25,7 @@ import { omit } from 'lodash';
 import { ClsService } from 'nestjs-cls';
 import type { IClsStore } from '../../types/cls';
 import StorageAdapter from '../attachments/plugins/adapter';
-import { getFullStorageUrl } from '../attachments/plugins/utils';
+import { getPublicFullStorageUrl } from '../attachments/plugins/utils';
 import { UserService } from '../user/user.service';
 import { generateSecret } from './utils';
 
@@ -38,7 +38,7 @@ export class PluginService {
   ) {}
 
   private logoToVoValue(logo: string) {
-    return getFullStorageUrl(StorageAdapter.getBucket(UploadType.Plugin), logo);
+    return getPublicFullStorageUrl(logo);
   }
 
   private convertToVo<
@@ -96,9 +96,7 @@ export class PluginService {
         }
         acc[user.id] = {
           ...user,
-          avatar: user.avatar
-            ? getFullStorageUrl(StorageAdapter.getBucket(UploadType.Avatar), user.avatar)
-            : undefined,
+          avatar: user.avatar ? getPublicFullStorageUrl(user.avatar) : undefined,
         };
         return acc;
       },
@@ -179,9 +177,7 @@ export class PluginService {
               id: user.id,
               name: user.name,
               email: user.email,
-              avatar: user.avatar
-                ? getFullStorageUrl(StorageAdapter.getBucket(UploadType.Avatar), user.avatar)
-                : undefined,
+              avatar: user.avatar ? getPublicFullStorageUrl(user.avatar) : undefined,
             }
           : undefined,
       };
@@ -351,6 +347,7 @@ export class PluginService {
         description: true,
         detailDesc: true,
         logo: true,
+        status: true,
         url: true,
         helpUrl: true,
         i18n: true,
@@ -364,12 +361,26 @@ export class PluginService {
               id: { in: ids },
             }
           : {}),
-        status: PluginStatus.Published,
-        ...(positions?.length
-          ? {
-              OR: positions.map((position) => ({ positions: { contains: position } })),
-            }
-          : {}),
+        AND: [
+          {
+            OR: [
+              {
+                status: PluginStatus.Published,
+              },
+              {
+                status: { not: PluginStatus.Published },
+                createdBy: this.cls.get('user.id'),
+              },
+            ],
+          },
+          ...(positions?.length
+            ? [
+                {
+                  OR: positions.map((position) => ({ positions: { contains: position } })),
+                },
+              ]
+            : []),
+        ],
       },
     });
     const userIds = res.map((r) => r.createdBy);
@@ -377,6 +388,7 @@ export class PluginService {
     return res.map((r) =>
       nullsToUndefined({
         ...r,
+        status: r.status as PluginStatus,
         logo: this.logoToVoValue(r.logo),
         i18n: r.i18n ? (JSON.parse(r.i18n) as IPluginI18n) : undefined,
         createdBy: userMap[r.createdBy],

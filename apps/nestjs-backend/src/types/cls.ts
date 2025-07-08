@@ -15,6 +15,12 @@ export interface IClsStore extends ClsStore {
     type: string;
     id: string;
   };
+  origin: {
+    ip: string;
+    byApi: boolean;
+    userAgent: string;
+    referer: string;
+  };
   tx: {
     client?: Prisma.TransactionClient;
     timeStr?: string;
@@ -35,4 +41,5 @@ export interface IClsStore extends ClsStore {
       name: string;
     }[];
   };
+  tempAuthBaseId?: string; // for automation robot
 }

@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ActionPrefix, actionPrefixMap, generateBaseId, isUnrestrictedRole } from '@teable/core';
+import { ActionPrefix, actionPrefixMap, generateBaseId } from '@teable/core';
 import { PrismaService } from '@teable/db-main-prisma';
 import { CollaboratorType, ResourceType } from '@teable/openapi';
 import type {
@@ -7,6 +7,7 @@ import type {
   ICreateBaseRo,
   IDuplicateBaseRo,
   IGetBasePermissionVo,
+  IMoveBaseRo,
   IUpdateBaseRo,
   IUpdateOrderRo,
 } from '@teable/openapi';
@@ -72,7 +73,6 @@ export class BaseService {
       ...base,
       role: role,
       collaboratorType: collaborator?.resourceType as CollaboratorType,
-      isUnrestricted: isUnrestrictedRole(role),
     };
   }
 
@@ -99,59 +99,17 @@ export class BaseService {
             spaceId: {
               in: spaceIds,
             },
+            space: {
+              deletedTime: null,
+            },
           },
         ],
       },
       orderBy: [{ spaceId: 'asc' }, { order: 'asc' }],
     });
-    return baseList.map((base) => ({ ...base, role: roleMap[base.id] || roleMap[base.spaceId] }));
-  }
-
-  async getAccessBaseList() {
-    const userId = this.cls.get('user.id');
-    const accessTokenId = this.cls.get('accessTokenId');
-    const { spaceIds, baseIds } =
-      await this.collaboratorService.getCurrentUserCollaboratorsBaseAndSpaceArray();
-
-    if (accessTokenId) {
-      const access = await this.prismaService.accessToken.findFirst({
-        select: {
-          baseIds: true,
-          spaceIds: true,
-        },
-        where: {
-          id: accessTokenId,
-          userId,
-        },
-      });
-      if (!access) {
-        return [];
-      }
-      spaceIds.push(...(access.spaceIds || []));
-      baseIds.push(...(access.baseIds || []));
-    }
-
-    return this.prismaService.base.findMany({
-      select: {
-        id: true,
-        name: true,
-      },
-      where: {
-        deletedTime: null,
-        OR: [
-          {
-            id: {
-              in: baseIds,
-            },
-          },
-          {
-            spaceId: {
-              in: spaceIds,
-            },
-          },
-        ],
-      },
-      orderBy: [{ spaceId: 'asc' }, { order: 'asc' }],
+    return baseList.map((base) => {
+      const role = roleMap[base.id] || roleMap[base.spaceId];
+      return { ...base, role };
     });
   }
 
@@ -297,17 +255,15 @@ export class BaseService {
   async duplicateBase(duplicateBaseRo: IDuplicateBaseRo) {
     // permission check, base update permission
     await this.checkBaseUpdatePermission(duplicateBaseRo.fromBaseId);
+    this.logger.log(
+      `base-duplicate-service: Start to duplicating base: ${duplicateBaseRo.fromBaseId}`
+    );
     return await this.prismaService.$tx(
       async () => {
         return await this.baseDuplicateService.duplicateBase(duplicateBaseRo);
       },
       { timeout: this.thresholdConfig.bigTransactionTimeout }
     );
-  }
-
-  // duplicate a base for template snapshot, not allow cross base field relative, all cross base link field will be duplicated as single text fields
-  async duplicateBaseForTemplate(duplicateBaseRo: IDuplicateBaseRo) {
-    return await this.baseDuplicateService.duplicateBase(duplicateBaseRo, false);
   }
 
   private async checkBaseUpdatePermission(baseId: string) {
@@ -318,6 +274,15 @@ export class BaseService {
     const accessTokenId = this.cls.get('accessTokenId');
     if (accessTokenId) {
       await this.permissionService.validPermissions(baseId, ['base|update'], accessTokenId);
+    }
+  }
+
+  private async checkBaseCreatePermission(spaceId: string) {
+    await this.permissionService.validPermissions(spaceId, ['base|create']);
+
+    const accessTokenId = this.cls.get('accessTokenId');
+    if (accessTokenId) {
+      await this.permissionService.validPermissions(spaceId, ['base|create'], accessTokenId);
     }
   }
 
@@ -428,6 +393,16 @@ export class BaseService {
         resourceId: baseId,
         resourceType: ResourceType.Base,
       },
+    });
+  }
+
+  async moveBase(baseId: string, moveBaseRo: IMoveBaseRo) {
+    const { spaceId } = moveBaseRo;
+    // check if has the permission to create base in the target space
+    await this.checkBaseCreatePermission(spaceId);
+    await this.prismaService.base.update({
+      where: { id: baseId },
+      data: { spaceId },
     });
   }
 }

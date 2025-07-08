@@ -44,7 +44,8 @@
     "hideNotMatchRow": "Hide not match row",
     "more": "More",
     "expand": "Expand",
-    "deleteTip": "Are you sure you want to delete \"{{name}}\"?"
+    "deleteTip": "Are you sure you want to delete \"{{name}}\"?",
+    "move": "Move to"
   },
   "quickAction": {
     "title": "Quick Actions...",
@@ -59,7 +60,10 @@
       "title": "Template Admin",
       "noData": "No data",
       "importing": "Importing...",
-      "usageCount": "Use count: {{count}}",
+      "usageCount": "Usage count: {{count}}",
+      "useTemplate": "Use this template",
+      "createdBy": "by {{user}}",
+      "backToTemplateList": "Back to template list",
       "tips": {
         "errorCategoryName": "Category does not exist or has been deleted",
         "needSnapshot": "Please create a snapshot before publishing, and the template name and description cannot be empty",
@@ -78,6 +82,7 @@
         "cover": "Cover",
         "name": "Name",
         "description": "Description",
+        "markdownDescription": "Markdown Description",
         "category": "Category",
         "isSystem": "System",
         "source": "Source",
@@ -101,10 +106,11 @@
         "title": "Select template source",
         "description": "Select a base to be the template",
         "confirm": "Confirm",
-        "search": "Search base",
+        "search": "Search...",
         "cancel": "Cancel",
         "selectBase": "Select base",
-        "createTemplate": "Create template"
+        "createTemplate": "Create template",
+        "abnormalBase": "Base does not exist or has been deleted"
       }
     },
     "back": "Back to home",
@@ -223,7 +229,9 @@
     "pluginPanel": "Panel",
     "pluginContextMenu": "Context Menu",
     "plugin": "Plugins",
-    "copy": "Copy"
+    "copy": "Copy",
+    "credits": "Credits",
+    "aiChat": "AI Chat"
   },
   "level": {
     "free": "Free",
@@ -232,6 +240,7 @@
     "enterprise": "Enterprise"
   },
   "noResult": "No Result.",
+  "noDescription": "No description",
   "untitled": "Untitled",
   "name": "Name",
   "description": "Description",
@@ -306,6 +315,7 @@
     "overLimitsDescription": "Your current subscription has exceeded its usage limit. Please upgrade your plan to continue using this feature without interruption.",
     "userLimitExceededDescription": "The current instance have reached the maximum number of users allowed by your license. Please deactivate some users or upgrade the license.",
     "unavailableInPlanTips": "The current subscription plan does not support this feature",
+    "unavailableConnectionTips": "Database connection feature will be removed and only available in Enterprise Plan and self-hosted versions.",
     "levelTips": "This space is currently on the {{level}} plan",
     "enterpriseFeature": "Enterprise Feature",
     "automationRequiresUpgrade": "Upgrade to Enterprise Edition (EE) to enable automation",
@@ -379,9 +389,12 @@
         "noModelFound": "No model found.",
         "searchModel": "Search model...",
         "selectModel": "Select model...",
-        "input": "Input",
-        "output": "Output",
-        "systemModelTips": "The input-to-output ratio represents the exchange rate between credits and tokens. For example, \"1:1000\" means 1 credit is roughly equal to 1000 tokens.<br></br>Note: Each use will deduct at least 1 credit. Even if the actual consumption is less than 1 credit, it will still be charged as 1 credit.",
+        "input": "Input {{ratio}}",
+        "output": "Output {{ratio}}",
+        "inputOrOutputTip": "The ratio represents the exchange rate between credits and tokens, e.g. \"1:1000\" means 1 credit ≈ 1000 tokens.<br></br>Note: Each use will deduct at least 1 credit. Even if the actual consumption is less than 1 credit, it will still be charged as 1 credit.",
+        "imageOutput": "Per image {{credits}}",
+        "imageOutputTip": "Image generation requires credits, each image consumes {{credits}} credits",
+        "supportImageOutputTip": "This model supports image generation",
         "supportVisionTip": "This model supports image input",
         "supportAudioTip": "This model supports audio input",
         "supportVideoTip": "This model supports video input",

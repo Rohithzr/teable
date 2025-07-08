@@ -2,7 +2,7 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: [f-v1.18]
+    branches: [f-develop, 1.8-dev]
 
 jobs:
   build:
@@ -29,4 +29,4 @@ jobs:
           tags: |
             docker.io/${{ secrets.DOCKER_USER }}/teable:latest
             docker.io/${{ secrets.DOCKER_USER }}/teable:${{ steps.version.outputs.VERSION }}
-
+            docker.io/${{ secrets.DOCKER_USER }}/teable:1.8-dev

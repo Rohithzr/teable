@@ -240,19 +240,31 @@ export class EventEmitterService {
       return;
     }
 
+    const { rawOpType } = existingEvent;
+
     if (
-      [RawOpType.Create, RawOpType.Edit].includes(existingEvent.rawOpType) &&
+      [RawOpType.Create, RawOpType.Edit].includes(rawOpType) &&
       event.name === Events.TABLE_RECORD_UPDATE
     ) {
-      const fields = this.getUpdateFieldsFromEvent(event as RecordUpdateEvent);
+      const fields = this.getUpdateFieldsFromEvent(event as RecordUpdateEvent, rawOpType);
       event = this.combineUpdateEvents(existingEvent as RecordCreateEvent, fields);
     }
 
     eventManager.set(id, event);
   }
 
-  private getUpdateFieldsFromEvent(event: RecordUpdateEvent): { [key: string]: unknown } {
-    return Object.entries((event.payload.record as IChangeRecord).fields).reduce(
+  private getUpdateFieldsFromEvent(
+    event: RecordUpdateEvent,
+    existedRawOpType: RawOpType
+  ): { [key: string]: unknown } {
+    const { payload } = event;
+    const fields = (payload.record as IChangeRecord).fields;
+
+    if (existedRawOpType === RawOpType.Edit) {
+      return fields;
+    }
+
+    return Object.entries(fields).reduce(
       (acc, [key, value]) => {
         acc[key] = value.newValue;
         return acc;

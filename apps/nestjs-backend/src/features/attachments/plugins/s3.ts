@@ -3,8 +3,11 @@
 import { join, resolve } from 'path';
 import type { Readable } from 'stream';
 import {
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -113,7 +116,7 @@ export class S3Storage implements StorageAdapter {
   }
   async getObjectMeta(bucket: string, path: string): Promise<IObjectMeta> {
     const url = `/${bucket}/${path}`;
-    const command = new GetObjectCommand({
+    const command = new HeadObjectCommand({
       Bucket: bucket,
       Key: path,
     });
@@ -121,9 +124,8 @@ export class S3Storage implements StorageAdapter {
       ContentLength: size,
       ContentType: mimetype,
       ETag: hash,
-      Body: stream,
     } = await this.s3Client.send(command);
-    if (!size || !mimetype || !hash || !stream) {
+    if (!size || !mimetype || !hash) {
       throw new BadRequestException('Invalid object meta');
     }
     if (!mimetype?.startsWith('image/')) {
@@ -135,17 +137,31 @@ export class S3Storage implements StorageAdapter {
       };
     }
     const metaReader = sharp();
-    const sharpReader = (stream as Readable).pipe(metaReader);
-    const { width, height } = await sharpReader.metadata();
-
-    return {
-      hash,
-      url,
-      size,
-      mimetype,
-      width,
-      height,
-    };
+    const getObjectCommand = new GetObjectCommand({
+      Bucket: bucket,
+      Key: path,
+    });
+    const { Body } = await this.s3Client.send(getObjectCommand);
+    const stream = Body as Readable;
+    if (!stream) {
+      throw new BadRequestException('Invalid image stream');
+    }
+    try {
+      const sharpReader = stream.pipe(metaReader);
+      const { width, height } = await sharpReader.metadata();
+      return {
+        hash,
+        url,
+        size,
+        mimetype,
+        width,
+        height,
+      };
+    } catch (error) {
+      throw new BadRequestException(`Calculate image size failed: ${(error as Error).message}`);
+    } finally {
+      stream?.destroy();
+    }
   }
   async getPreviewUrl(
     bucket: string,
@@ -290,5 +306,34 @@ export class S3Storage implements StorageAdapter {
     });
     const { Body: stream } = await this.s3Client.send(command);
     return stream as Readable;
+  }
+
+  async deleteDir(bucket: string, path: string, throwError: boolean = true) {
+    const prefix = path.endsWith('/') ? path : `${path}/`;
+
+    const { Contents } = await this.s3Client.send(
+      new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: prefix,
+      })
+    );
+
+    if (!Contents || Contents.length === 0) return;
+
+    try {
+      await this.s3Client.send(
+        new DeleteObjectsCommand({
+          Bucket: bucket,
+          Delete: {
+            Objects: Contents.map((obj) => ({ Key: obj.Key! })),
+          },
+        })
+      );
+    } catch (error) {
+      if (!throwError) {
+        return;
+      }
+      throw error;
+    }
   }
 }

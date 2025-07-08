@@ -57,7 +57,18 @@
       "helperExample": "Приклад: ",
       "fieldValue": "Повертає значення до клітинок поля {{fieldName}}.",
       "placeholder": "Введіть вираз",
-      "placeholderForAI": "Введіть вираз або натисніть // для створення за допомогою ШІ"
+      "placeholderForAIPrompt": "Опишіть формулу, яку ви хочете створити",
+      "editExpression": "Редагувати формулу",
+      "generateExpressionByAI": "Створіть формулу за допомогою ШІ",
+      "inputPrompt": "Введіть інструкцію",
+      "generateExpression": "Створена формула",
+      "generatingByAI": "Створюється формула за допомогою ШІ...",
+      "generatedExpressionTips": "Після створення, натисніть на кнопку Примінити, щоб вставити формулу швидко",
+      "action": {
+        "generating": "Створюється...",
+        "generate": "Створити",
+        "apply": "Примінити"
+      }
     },
     "link": {
       "placeholder": "Виберіть записи для зв'язування",
@@ -145,6 +156,7 @@
         "daysAgo": "днів тому",
         "daysFromNow": "днів відтепер",
         "exactDate": "точна дата",
+        "exactFormatDate": "точна дата (форматована)",
         "currentWeek": "поточний тиждень",
         "currentMonth": "поточний місяць",
         "currentYear": "поточний рік",
@@ -172,7 +184,12 @@
     "short": "низький",
     "medium": "середній",
     "tall": "високий",
-    "extraTall": "дуже високий"
+    "extraTall": "дуже високий",
+    "title": "Настройка высоты строки"
+  },
+  "fieldNameConfig": {
+    "title": "Настройка имени поля",
+    "displayLines": "{{count}} строк"
   },
   "share": {
     "title": "поділитися"
@@ -752,5 +769,34 @@
     "noSelected": "Не вибрано",
     "empty": "Немає учасників",
     "emptyDepartment": "Немає відділів"
+  },
+  "httpErrors": {
+    "validationError": "Помилка валідації",
+    "invalidCaptcha": "Неправильний Captcha",
+    "invalidCredentials": "Неправильні облікові дані",
+    "unauthorized": "Не авторизовано",
+    "unauthorizedShare": "Не авторизована доступ",
+    "paymentRequired": "Потрібна оплата",
+    "restrictedResource": "Обмежений ресурс",
+    "notFound": "Не знайдено",
+    "conflict": "Конфлікт",
+    "unprocessableEntity": "Необроблюваний ресурс",
+    "userLimitExceeded": "Перевищений ліміт користувача",
+    "tooManyRequests": "Забагато запитів",
+    "internalServerError": "Внутрішня помилка сервера",
+    "databaseConnectionUnavailable": "Недоступна база даних",
+    "gatewayTimeout": "Таймаут шлюза",
+    "unknownErrorCode": "Невідомий код помилки",
+    "viewNotFound": "Не знайдено вид",
+    "requestTimeout": "Таймаут запиту",
+    "failedDependency": "Залежність не виконана",
+    "custom": {
+      "fieldValueNotNull": "\"{{tableName}}\" поле \"{{fieldName}}\" не допускає пусті значення, будь ласка, заповніть його повністю перед відправкою.",
+      "fieldValueDuplicate": "\"{{tableName}}\" поле \"{{fieldName}}\" не допускає дублікатів значень, будь ласка, заповніть унікальне значення перед відправкою.",
+      "linkFieldValueDuplicate": "\"{{fieldName}}\" поле не допускає дублікатів зв'язків з одним і тим самим запису",
+      "requestTimeout": "Текущая операция слишком велика, пожалуйста, попробуйте снова с меньшим диапазоном.",
+      "searchTimeOut": "Пошук завершений, зменшіть область пошуку та повторіть.",
+      "dependencyNodeRequire": "Залежний вузол не протестований, перевірте, чи всі попередні вузли протестовані"
+    }
   }
 }

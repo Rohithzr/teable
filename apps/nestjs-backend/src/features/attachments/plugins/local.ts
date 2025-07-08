@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { createReadStream, createWriteStream, unlinkSync } from 'fs';
+import { createReadStream, createWriteStream, unlinkSync, existsSync, rmSync } from 'fs';
 import { type Readable as ReadableStream } from 'node:stream';
 import { join, resolve } from 'path';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { getRandomString } from '@teable/core';
+import { READ_PATH } from '@teable/openapi';
 import type { Request } from 'express';
 import * as fse from 'fs-extra';
 import sharp from 'sharp';
@@ -27,7 +28,7 @@ export class LocalStorage implements StorageAdapter {
   path: string;
   storageDir: string;
   expireTokenEncryptor: Encryptor<ITokenEncryptor>;
-  static readPath = '/api/attachments/read';
+  static readPath = READ_PATH;
 
   constructor(
     @StorageConfig() readonly config: IStorageConfig,
@@ -41,8 +42,9 @@ export class LocalStorage implements StorageAdapter {
     fse.ensureDirSync(this.storageDir);
   }
 
-  private getUploadUrl(token: string) {
-    return `${this.baseConfig.storagePrefix}/api/attachments/upload/${token}`;
+  private getUploadUrl(token: string, internal?: boolean) {
+    const baseUrl = internal ? `http://localhost:${process.env.PORT}` : '';
+    return `${baseUrl}/api/attachments/upload/${token}`;
   }
 
   private deleteFile(filePath: string) {
@@ -72,7 +74,7 @@ export class LocalStorage implements StorageAdapter {
   }
 
   async presigned(_bucket: string, dir: string, params: IPresignParams) {
-    const { contentType, contentLength, hash } = params;
+    const { contentType, contentLength, hash, internal } = params;
     const token = getRandomString(12);
     const filename = hash ?? token;
     const expiresIn = params?.expiresIn ?? second(this.config.tokenExpireIn);
@@ -90,7 +92,7 @@ export class LocalStorage implements StorageAdapter {
     return {
       token,
       path,
-      url: this.getUploadUrl(token),
+      url: this.getUploadUrl(token, internal),
       uploadMethod: 'PUT',
       requestHeaders: {
         'Content-Type': contentType,
@@ -233,7 +235,7 @@ export class LocalStorage implements StorageAdapter {
       expiresDate: Math.floor(Date.now() / 1000) + expiresIn,
       respHeaders,
     });
-    return this.baseConfig.storagePrefix + join('/', url);
+    return join('/', url);
   }
   verifyReadToken(token: string) {
     try {
@@ -322,5 +324,22 @@ export class LocalStorage implements StorageAdapter {
 
   async downloadFile(bucket: string, path: string): Promise<ReadableStream> {
     return createReadStream(resolve(this.storageDir, bucket, path));
+  }
+
+  async deleteDir(bucket: string, path: string, throwError: boolean = true) {
+    const dirPath = resolve(this.storageDir, bucket, path);
+    try {
+      if (existsSync(dirPath)) {
+        rmSync(dirPath, { recursive: true, force: true });
+      } else {
+        this.logger.error('delete dir failed: no such dir', dirPath);
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      if (error?.code === 'ENOENT' || !throwError) {
+        return;
+      }
+      throw error;
+    }
   }
 }

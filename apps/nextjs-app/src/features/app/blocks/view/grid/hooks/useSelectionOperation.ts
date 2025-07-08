@@ -1,7 +1,7 @@
 /* eslint-disable sonarjs/no-duplicate-string */
 import type { UseMutateAsyncFunction } from '@tanstack/react-query';
 import { useMutation } from '@tanstack/react-query';
-import type { IFieldVo } from '@teable/core';
+import { FieldType, fieldVoSchema, type HttpError } from '@teable/core';
 import type {
   ICopyVo,
   IPasteRo,
@@ -9,7 +9,14 @@ import type {
   ITemporaryPasteRo,
   ITemporaryPasteVo,
 } from '@teable/openapi';
-import { clear, copy, deleteSelection, paste, temporaryPaste } from '@teable/openapi';
+import {
+  clear,
+  copy,
+  deleteSelection,
+  paste,
+  saveQueryParams,
+  temporaryPaste,
+} from '@teable/openapi';
 import type { CombinedSelection, IRecordIndexMap } from '@teable/sdk';
 import {
   useBaseId,
@@ -19,13 +26,15 @@ import {
   useView,
   useViewId,
   usePersonalView,
+  getHttpErrorMessage,
+  LARGE_QUERY_THRESHOLD,
 } from '@teable/sdk';
 import { toast } from '@teable/ui-lib/shadcn/ui/sonner';
 import type { AxiosResponse } from 'axios';
 import { useTranslation } from 'next-i18next';
 import { useCallback } from 'react';
 import { isHTTPS, isLocalhost } from '@/features/app/utils';
-import { serializerHtml } from '@/features/app/utils/clipboard';
+import { serializerCellValueHtml, serializerHtml } from '@/features/app/utils/clipboard';
 import { tableConfig } from '@/features/i18n/table.config';
 import { selectionCoverAttachments } from '../utils';
 import {
@@ -37,6 +46,9 @@ import {
 } from '../utils/copyAndPaste';
 import { getSyncCopyData } from '../utils/getSyncCopyData';
 import { useSyncSelectionStore } from './useSelectionStore';
+
+const clearToastId = 'clearToastId';
+const deleteToastId = 'deleteToastId';
 
 export const useSelectionOperation = (props?: {
   collapsedGroupIds?: string[];
@@ -64,15 +76,21 @@ export const useSelectionOperation = (props?: {
   const groupBy = view?.group;
 
   const { mutateAsync: defaultCopyReq } = useMutation({
-    mutationFn: (copyRo: IRangesRo) =>
-      copy(tableId!, {
-        ...copyRo,
+    mutationFn: async (copyRo: IRangesRo) => {
+      const { collapsedGroupIds: originalCollapsedGroupIds, ...rest } = copyRo;
+      const params = {
+        ...rest,
         ...personalViewCommonQuery,
         viewId,
         groupBy,
-        collapsedGroupIds,
         search,
-      }),
+      };
+      if (collapsedGroupIds && collapsedGroupIds.length > LARGE_QUERY_THRESHOLD) {
+        const { data } = await saveQueryParams({ params: { collapsedGroupIds } });
+        return copy(tableId!, { ...params, queryId: data.queryId });
+      }
+      return copy(tableId!, { ...params, collapsedGroupIds });
+    },
     meta: {
       preventGlobalError: true,
     },
@@ -108,6 +126,9 @@ export const useSelectionOperation = (props?: {
         collapsedGroupIds,
         search,
       }),
+    onError: () => {
+      toast.dismiss(clearToastId);
+    },
   });
 
   const { mutateAsync: deleteReq } = useMutation({
@@ -120,6 +141,9 @@ export const useSelectionOperation = (props?: {
         collapsedGroupIds,
         search,
       }),
+    onError: () => {
+      toast.dismiss(deleteToastId);
+    },
   });
 
   const copyRequest = copyReq || defaultCopyReq;
@@ -199,6 +223,7 @@ export const useSelectionOperation = (props?: {
           const isSelectionCoverAttachments = selectionCoverAttachments(selection, fields);
           if (!isSelectionCoverAttachments) {
             toast.error(t('table:table.actionTips.pasteFileFailed'), { id: toastId });
+            return;
           }
           await filePasteHandler({
             files,
@@ -207,16 +232,26 @@ export const useSelectionOperation = (props?: {
             recordMap,
             baseId,
             requestPaste: async (content, type, ranges) => {
+              const header = [
+                fieldVoSchema.parse(fields.find((f) => f.type === FieldType.Attachment)),
+              ];
               if (updateTemporaryData) {
-                const res = await temporaryPasteReq({ content, ranges });
+                const res = await temporaryPasteReq({
+                  content,
+                  ranges,
+                  header,
+                });
                 updateTemporaryData(res.data);
               } else {
-                await pasteReq({ content, type, ranges });
+                await pasteReq({ content, type, ranges, header });
               }
             },
           });
         } else {
           await textPasteHandler(e, selection, async (content, type, ranges, header) => {
+            if (!content) {
+              return;
+            }
             if (updateTemporaryData) {
               const res = await temporaryPasteReq({ content, ranges, header });
               updateTemporaryData(res.data);
@@ -227,9 +262,10 @@ export const useSelectionOperation = (props?: {
         }
         toast.success(t('table:table.actionTips.pasteSuccessful'), { id: toastId });
       } catch (e) {
-        const error = e as Error;
+        const error = e as HttpError;
+        const description = getHttpErrorMessage(error, t, 'sdk');
         toast.error(t('table:table.actionTips.pasteFailed'), {
-          description: error.message,
+          description,
           id: toastId,
         });
         console.error('Paste error: ', error);
@@ -242,7 +278,7 @@ export const useSelectionOperation = (props?: {
     async (selection: CombinedSelection) => {
       if (!viewId || !tableId) return;
 
-      const toastId = toast.loading(t('table:table.actionTips.clearing'));
+      const toastId = toast.loading(t('table:table.actionTips.clearing'), { id: clearToastId });
       const ranges = selection.serialize();
       const type = rangeTypes[selection.type];
 
@@ -253,14 +289,14 @@ export const useSelectionOperation = (props?: {
 
       toast.success(t('table:table.actionTips.clearSuccessful'), { id: toastId });
     },
-    [tableId, viewId, clearReq, t]
+    [tableId, viewId, t, clearReq]
   );
 
   const doDelete = useCallback(
     async (selection: CombinedSelection) => {
       if (!viewId || !tableId) return;
 
-      const toastId = toast.loading(t('table:table.actionTips.deleting'));
+      const toastId = toast.loading(t('table:table.actionTips.deleting'), { id: deleteToastId });
       const ranges = selection.serialize();
       const type = rangeTypes[selection.type];
 
@@ -286,18 +322,21 @@ export const useSelectionOperation = (props?: {
     ) => {
       const toastId = toast.loading(t('table:table.actionTips.copying'));
       try {
-        let content: string;
-        let header: IFieldVo[];
         if ('getCopyData' in params) {
           const data = params.getCopyData();
-          content = data.content;
-          header = data.header;
+          const content = data.content;
+          const header = data.header;
+          e.clipboardData.setData(ClipboardTypes.text, content);
+          e.clipboardData.setData(ClipboardTypes.html, serializerHtml(content, header));
         } else if ('recordMap' in params && 'selection' in params) {
           const recordMap = params.recordMap;
           const selection = params.selection;
           const res = getSyncCopyData({ recordMap, fields, selection });
-          content = res.content;
-          header = res.header;
+          e.clipboardData.setData(ClipboardTypes.text, res.content);
+          e.clipboardData.setData(
+            ClipboardTypes.html,
+            serializerCellValueHtml(res.rawContent, res.headers)
+          );
         } else {
           toast.error(t('table:table.actionTips.copyFailed'), {
             description: 'Unsupported selection type',
@@ -305,8 +344,6 @@ export const useSelectionOperation = (props?: {
           });
           return;
         }
-        e.clipboardData.setData(ClipboardTypes.text, content);
-        e.clipboardData.setData(ClipboardTypes.html, serializerHtml(content, header));
         e.preventDefault();
         toast.success(t('table:table.actionTips.copySuccessful'), { id: toastId });
       } catch (e) {

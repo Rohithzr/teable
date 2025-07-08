@@ -232,7 +232,7 @@
       "calculating": "Обчислення...",
       "doSaveChanges": "Ви хочете зберегти внесені зміни?",
       "linkFieldToLookup": "Зв'язане поле запису для пошуку",
-      "lookupToTable": "Поле {{tableName}}, яке потрібно знайти",
+      "lookupToTable": "Поле з {{tableName}}, яке потрібно знайти",
       "selectField": "Виберіть поле...",
       "linkTable": "Таблиця посилань",
       "linkBase": "База посилань",
@@ -286,7 +286,9 @@
         "improvement": "Покращення",
         "tag": "Смарт-тег",
         "classification": "Смарт-класифікація",
-        "customization": "Налаштування"
+        "customization": "Налаштування",
+        "imageGeneration": "Генерація зображень",
+        "rating": "Оцінка зображень"
       },
       "label": {
         "type": "Тип дії AI",
@@ -296,7 +298,11 @@
         "sourceFieldForTag": "Виберіть поле, щоб збігти його зі створеними тегами",
         "sourceFieldForClassify": "Виберіть поле, щоб збігти його зі створеними класифікаціями",
         "attachPrompt": "Прикріпити вимоги",
-        "prompt": "Налаштувати Prompt"
+        "prompt": "Налаштувати Prompt",
+        "sourceFieldForAttachment": "Вихідне поле для вкладень",
+        "imageSize": "Розмір зображення",
+        "imageQuality": "Якість зображення",
+        "imageCount": "Кількість зображень"
       },
       "placeholder": {
         "summarize": "Сума змісту",
@@ -308,7 +314,16 @@
         "attachPrompt": "Будь ласка, введіть додаткові вимоги",
         "prompt": "Будь ласка, введіть власний prompt",
         "type": "Виберіть дію AI",
-        "targetLanguage": "Англійська, Китайська, Французька..."
+        "targetLanguage": "Англійська, Китайська, Французька...",
+        "imageSize": "Будь ласка, введіть розмір зображення",
+        "imageQuality": "Будь ласка, введіть якість зображення",
+        "attachPromptForImageGeneration": "Зображення повинно бути живим та природним",
+        "attachPromptForRating": "Оцінити якість зображення"
+      },
+      "imageQuality": {
+        "low": "Низька",
+        "medium": "Середня",
+        "high": "Висока"
       },
       "autoFill": {
         "title": "Автооновлення",
@@ -531,7 +546,12 @@
     "deleteAllSelectedFields": "Видалити всі вибрані поля",
     "filterField": "Фільтрувати за цим полем",
     "sortField": "Сортувати за цим полем",
-    "groupField": "Групувати за цим полем"
+    "groupField": "Групувати за цим полем",
+    "groupMenuTitle": "Меню групи",
+    "expandGroup": "Розгорнути цю групу та її підгрупи",
+    "collapseGroup": "Згорнути цю групу та її підгрупи",
+    "expandAllGroups": "Розгорнути всі групи",
+    "collapseAllGroups": "Згорнути всі групи"
   },
   "connection": {
     "title": "Підключення до бази даних",
@@ -582,5 +602,48 @@
     "title": "Кошик таблиці",
     "resourceType": "Тип ресурсу",
     "deletedResource": "Видалений ресурс"
+  },
+  "aiChat": {
+    "tool": {
+      "getTableFields": "Отримати поля таблиці",
+      "getTablesMeta": "Отримати метадані таблиці",
+      "sqlQuery": "Виконати SQL запит",
+      "generateScriptAction": "Створити дію скрипта",
+      "getScriptInput": "Отримати вхідні дані скрипта",
+      "getTeableApi": "Отримати API",
+      "args": "Аргументи",
+      "result": "Результат"
+    },
+    "codeBlock": {
+      "hiddenLines": "{{count}} рядків приховано",
+      "collapseCode": "Згорнути код",
+      "code": "Код",
+      "preview": "Попередній перегляд"
+    },
+    "newChat": "Новий чат",
+    "noModel": "Немає доступних моделей",
+    "noHistory": "Немає історії чату",
+    "noFoundHistory": "Немає історії чату, будь ласка, почати нову розмову",
+    "timeGroup": {
+      "today": "Сьогодні",
+      "oneWeek": "Одна тиждень",
+      "twoWeek": "Дві тижні",
+      "oneMonth": "Один місяць",
+      "other": "Інше"
+    },
+    "context": {
+      "button": "Додати контекст",
+      "search": "Додати таблиці",
+      "searchEmpty": "Не знайдено відповідного контексту",
+      "emptyContext": "Немає контексту для додавання"
+    },
+    "inputPlaceholder": "Відправити повідомлення...",
+    "thought": "Міркування",
+    "meta": {
+      "timeCostUnit": "s",
+      "timeCostDescription": "Час генерації: {{timeCost}}s",
+      "creditDescription": "{{credits}} кредитів використано",
+      "tokenDescription": "Токенів використано: {{tokens}}"
+    }
   }
 }

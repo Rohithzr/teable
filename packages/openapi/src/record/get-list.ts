@@ -8,7 +8,7 @@ import {
   sortItemSchema,
 } from '@teable/core';
 import type { AxiosResponse } from 'axios';
-import { groupPointsVoSchema } from '../aggregation/type';
+import { groupHeaderRefSchema, groupPointsVoSchema } from '../aggregation/type';
 import { axios } from '../axios';
 import { registerRoute, urlBuilder } from '../utils';
 import { z } from '../zod';
@@ -23,10 +23,21 @@ export const queryBaseSchema = z.object({
     description:
       'Set the view you want to fetch, default is first view. result will filter and sort by view options.',
   }),
-  ignoreViewQuery: z.string().or(z.boolean()).transform(Boolean).optional().openapi({
-    description:
-      "When a viewId is specified, configure this to true will ignore the view's filter, sort, etc",
-  }),
+  ignoreViewQuery: z
+    .string()
+    .or(z.boolean())
+    .transform((value: string | boolean) => {
+      if (typeof value === 'boolean') return value;
+      if (typeof value === 'string' && value.toLowerCase() !== 'false') {
+        return true;
+      }
+      return false;
+    })
+    .optional()
+    .openapi({
+      description:
+        "When a viewId is specified, configure this to true will ignore the view's filter, sort, etc",
+    }),
   filterByTql: z.string().optional().openapi({
     example: "{field} = 'Completed' AND {field} > 5",
     deprecated: true,
@@ -155,8 +166,29 @@ export const contentQueryBaseSchema = queryBaseSchema.extend({
       type: 'string',
       description: 'An array of group objects that specifies how the records should be grouped.',
     }),
-  collapsedGroupIds: z.array(z.string()).optional().openapi({
-    description: 'An array of group ids that specifies which groups are collapsed',
+  collapsedGroupIds: z
+    .string()
+    .optional()
+    .transform((value, ctx) => {
+      if (value == null) {
+        return value;
+      }
+
+      const parsingResult = z.array(z.string()).safeParse(JSON.parse(value));
+      if (!parsingResult.success) {
+        parsingResult.error.issues.forEach((issue) => {
+          ctx.addIssue(issue);
+        });
+        return z.NEVER;
+      }
+      return parsingResult.data;
+    })
+    .openapi({
+      description: 'An array of group ids that specifies which groups are collapsed',
+    }),
+  queryId: z.string().optional().openapi({
+    example: 'qry_xxxxxxxx',
+    description: 'When provided, other query parameters will be merged with the saved ones.',
   }),
 });
 
@@ -216,14 +248,13 @@ export const recordsVoSchema = z.object({
     ],
     description: 'Array of record objects ',
   }),
-  offset: z.string().optional().openapi({
-    description:
-      'If more records exist, the response includes an offset. Use this offset for fetching the next page of records.',
-  }),
   extra: z
     .object({
       groupPoints: groupPointsVoSchema.optional().openapi({
         description: 'Group points for the view',
+      }),
+      allGroupHeaderRefs: z.array(groupHeaderRefSchema).optional().openapi({
+        description: 'All group header refs for the view, including collapsed group headers',
       }),
     })
     .optional(),
@@ -268,6 +299,9 @@ export async function getRecords(
     filter: query?.filter ? JSON.stringify(query.filter) : undefined,
     orderBy: query?.orderBy ? JSON.stringify(query.orderBy) : undefined,
     groupBy: query?.groupBy ? JSON.stringify(query.groupBy) : undefined,
+    collapsedGroupIds: query?.collapsedGroupIds
+      ? JSON.stringify(query.collapsedGroupIds)
+      : undefined,
   };
 
   return axios.get<IRecordsVo>(urlBuilder(GET_RECORDS_URL, { tableId }), {

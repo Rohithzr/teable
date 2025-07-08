@@ -67,5 +67,12 @@ export enum Events {
 
   RECORD_HISTORY_CREATE = 'record.history.create',
 
+  // following make no sense just for testing
   BASE_EXPORT_COMPLETE = 'base.export.complete',
+
+  LAST_VISIT_CLEAR = 'last.visit.clear',
+
+  AUDIT_LOG_SAVED = 'audit-log.saved',
+
+  IMPORT_TABLE_COMPLETE = 'import.table.complete',
 }

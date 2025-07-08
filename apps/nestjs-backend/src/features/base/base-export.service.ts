@@ -43,6 +43,7 @@ export class BaseExportService {
     'order',
     'lookupOptions',
     'isLookup',
+    'aiConfig',
     // for formula field
     'dbFieldType',
     'cellValueType',
@@ -159,7 +160,7 @@ export class BaseExportService {
     archive.pipe(passThrough);
 
     // 2. generate base structure json
-    const structure = await this.generateBaseStructJson({
+    const structure = await this.generateBaseStructConfig({
       baseRaw,
       tableRaws,
       fieldRaws,
@@ -231,7 +232,7 @@ export class BaseExportService {
     };
   }
 
-  async generateBaseStructJson({
+  async generateBaseStructConfig({
     baseRaw,
     tableRaws,
     fieldRaws,
@@ -262,7 +263,7 @@ export class BaseExportService {
       tables.push(tableObject);
     }
 
-    const plugins = await this.generatePluginJson(baseId);
+    const plugins = await this.generatePluginConfig(baseId);
 
     return {
       name: baseName,
@@ -665,7 +666,7 @@ export class BaseExportService {
   // cross base link field and relative fields should convert to text as well
   private generateFieldConfig(fieldRaws: Field[], allowCrossBase = false) {
     const fields = fieldRaws.map((fieldRaw) => createFieldInstanceByRaw(fieldRaw));
-    const createTimeMap = fieldRaws.reduce(
+    const createdTimeMap = fieldRaws.reduce(
       (acc, field) => {
         acc[field.id] = field.createdTime.toISOString();
         return acc;
@@ -679,7 +680,7 @@ export class BaseExportService {
       .filter(({ id }) => !crossBaseRelativeFields.map(({ id }) => id).includes(id))
       .map((field, index) => ({
         ...pick(field, BaseExportService.EXPORT_FIELD_COLUMNS),
-        createTime: createTimeMap[field.id],
+        createdTime: createdTimeMap[field.id],
         order: fieldRaws[index].order,
       }));
 
@@ -688,7 +689,7 @@ export class BaseExportService {
 
   private getCrossBaseFields(fieldRaws: Field[], allowCrossBase = false) {
     const fields = fieldRaws.map((fieldRaw) => createFieldInstanceByRaw(fieldRaw));
-    const createTimeMap = fieldRaws.reduce(
+    const createdTimeMap = fieldRaws.reduce(
       (acc, field) => {
         acc[field.id] = field.createdTime.toISOString();
         return acc;
@@ -702,7 +703,7 @@ export class BaseExportService {
         const res = {
           ...pick(field, BaseExportService.EXPORT_FIELD_COLUMNS),
           type: allowCrossBase ? field.type : FieldType.SingleLineText,
-          createTime: createTimeMap[field.id],
+          createdTime: createdTimeMap[field.id],
           order: fieldRaws[index].order,
         };
 
@@ -720,6 +721,7 @@ export class BaseExportService {
       .map((field, index) => ({
         ...pick(field, BaseExportService.EXPORT_FIELD_COLUMNS),
         type: allowCrossBase ? field.type : FieldType.SingleLineText,
+        createdTime: createdTimeMap[field.id],
         order: fieldRaws[index].order,
       }));
 
@@ -753,7 +755,7 @@ export class BaseExportService {
     );
   }
 
-  async generatePluginJson(baseId: string) {
+  async generatePluginConfig(baseId: string) {
     const pluginJson = {} as IBaseJson['plugins'];
 
     pluginJson[PluginPosition.Dashboard] = await this.generateDashboard(baseId);

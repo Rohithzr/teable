@@ -20,6 +20,13 @@ export default function withEnv<P extends { [key: string]: any }>(
 ): NextGetServerSideProps<P> {
   return async (context: GetServerSidePropsContext) => {
     const { driver } = parseDsn(process.env.PRISMA_DATABASE_URL as string);
+    const envMaxSearchFieldCount = toNumber(process.env.MAX_SEARCH_FIELD_COUNT);
+    const storage = {
+      provider: process.env.BACKEND_STORAGE_PROVIDER ?? 'local',
+      prefix: process.env.STORAGE_PREFIX ?? process.env.PUBLIC_ORIGIN,
+      publicBucket: process.env.BACKEND_STORAGE_PUBLIC_BUCKET ?? 'public',
+      publicUrl: process.env.BACKEND_STORAGE_PUBLIC_URL,
+    };
     const env = omitBy(
       {
         driver,
@@ -29,15 +36,14 @@ export default function withEnv<P extends { [key: string]: any }>(
         umamiWebSiteId: process.env.UMAMI_WEBSITE_ID,
         sentryDsn: process.env.SENTRY_DSN,
         socialAuthProviders: process.env.SOCIAL_AUTH_PROVIDERS?.split(','),
-        storagePrefix: process.env.STORAGE_PREFIX,
+        storage: omitBy(storage, isUndefined),
         passwordLoginDisabled: process.env.PASSWORD_LOGIN_DISABLED === 'true' ? true : undefined,
         hideBranding: process.env.HIDE_BRANDING === 'true' ? true : undefined,
-        maxSearchFieldCount: process.env.MAX_SEARCH_FIELD_COUNT
-          ? toNumber(process.env.MAX_SEARCH_FIELD_COUNT) === Infinity
-            ? // Infinity has been transformed to null unexpectedly
-              undefined
-            : toNumber(process.env.MAX_SEARCH_FIELD_COUNT)
-          : 20,
+        // default to Infinity, return undefined causing the value will be transformed to null when json-stringify
+        maxSearchFieldCount:
+          isNaN(envMaxSearchFieldCount) || envMaxSearchFieldCount === Infinity
+            ? undefined
+            : envMaxSearchFieldCount,
       },
       isUndefined
     );

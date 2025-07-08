@@ -20,7 +20,8 @@ import { UserSignUpEvent } from '../../event-emitter/events/user/user.event';
 import type { IClsStore } from '../../types/cls';
 import StorageAdapter from '../attachments/plugins/adapter';
 import { InjectStorageAdapter } from '../attachments/plugins/storage';
-import { getFullStorageUrl } from '../attachments/plugins/utils';
+import { getPublicFullStorageUrl } from '../attachments/plugins/utils';
+import { SettingService } from '../setting/setting.service';
 
 @Injectable()
 export class UserService {
@@ -28,6 +29,7 @@ export class UserService {
     private readonly prismaService: PrismaService,
     private readonly cls: ClsService<IClsStore>,
     private readonly eventEmitterService: EventEmitterService,
+    private readonly settingService: SettingService,
     @InjectStorageAdapter() readonly storageAdapter: StorageAdapter
   ) {}
 
@@ -39,9 +41,7 @@ export class UserService {
     return (
       userRaw && {
         ...userRaw,
-        avatar:
-          userRaw.avatar &&
-          getFullStorageUrl(StorageAdapter.getBucket(UploadType.Avatar), userRaw.avatar),
+        avatar: userRaw.avatar && getPublicFullStorageUrl(userRaw.avatar),
         notifyMeta: userRaw.notifyMeta && JSON.parse(userRaw.notifyMeta),
       }
     );
@@ -87,12 +87,7 @@ export class UserService {
     account?: Omit<Prisma.AccountUncheckedCreateInput, 'userId'>,
     defaultSpaceName?: string
   ) {
-    const setting = await this.prismaService.setting.findFirst({
-      select: {
-        disallowSignUp: true,
-      },
-    });
-
+    const setting = await this.settingService.getSetting();
     if (setting?.disallowSignUp) {
       throw new BadRequestException('The current instance disallow sign up by the administrator');
     }
@@ -330,6 +325,7 @@ export class UserService {
       where: { id: userId, deletedTime: null },
       data: { lastSignTime: new Date().toISOString() },
     });
+    this.eventEmitterService.emitAsync(Events.USER_SIGNIN, { userId });
   }
 
   async getUserInfoList(userIds: string[]) {
@@ -348,7 +344,7 @@ export class UserService {
       const { avatar } = user;
       return {
         ...user,
-        avatar: avatar && getFullStorageUrl(StorageAdapter.getBucket(UploadType.Avatar), avatar),
+        avatar: avatar && getPublicFullStorageUrl(avatar),
       };
     });
   }

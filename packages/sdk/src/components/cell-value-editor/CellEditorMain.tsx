@@ -8,7 +8,6 @@ import type {
   IMultipleSelectCellValue,
   INumberCellValue,
   IRatingFieldOptions,
-  ISelectFieldChoice,
   ISelectFieldOptions,
   ISingleLineTextCellValue,
   ISingleLineTextFieldOptions,
@@ -16,10 +15,10 @@ import type {
   IUserCellValue,
   IUserFieldOptions,
 } from '@teable/core';
-import { ColorUtils, FieldType } from '@teable/core';
+import { FieldType } from '@teable/core';
+import { temporaryPaste } from '@teable/openapi';
 import { useCallback, useEffect, useRef } from 'react';
 import { useTableId } from '../../hooks';
-import { Field } from '../../model';
 import { transformSelectOptions } from '../cell-value';
 import {
   AttachmentEditor,
@@ -49,23 +48,17 @@ export const CellEditorMain = (props: Omit<ICellValueEditor, 'wrapClassName' | '
   const onOptionAdd = useCallback(
     async (name: string) => {
       if (!tableId) return;
-      if (type !== FieldType.SingleSelect && type !== FieldType.MultipleSelect) return;
 
-      const { choices = [] } = options as ISelectFieldOptions;
-      const existColors = choices.map((v) => v.color);
-      const choice = {
-        name,
-        color: ColorUtils.randomColor(existColors)[0],
-      } as ISelectFieldChoice;
-
-      const newChoices = [...choices, choice];
-
-      await Field.convertField(tableId, fieldId, {
-        type,
-        options: { ...options, choices: newChoices },
+      await temporaryPaste(tableId, {
+        content: name,
+        projection: [fieldId],
+        ranges: [
+          [0, 0],
+          [0, 0],
+        ],
       });
     },
-    [tableId, type, fieldId, options]
+    [tableId, fieldId]
   );
 
   switch (type) {

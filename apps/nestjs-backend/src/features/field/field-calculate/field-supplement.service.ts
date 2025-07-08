@@ -25,6 +25,7 @@ import {
   CreatedTimeFieldCore,
   DateFieldCore,
   DbFieldType,
+  extractFieldIdsFromFilter,
   FieldAIActionType,
   FieldType,
   generateChoiceId,
@@ -48,7 +49,7 @@ import {
 } from '@teable/core';
 import { PrismaService } from '@teable/db-main-prisma';
 import { Knex } from 'knex';
-import { keyBy, merge, mergeWith } from 'lodash';
+import { uniq, keyBy, mergeWith } from 'lodash';
 import { InjectModel } from 'nest-knexjs';
 import type { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
@@ -484,8 +485,8 @@ export class FieldSupplementService {
 
     return {
       ...sourceOptions,
-      ...(formatting ? { formatting } : {}),
-      ...(showAs ? { showAs } : {}),
+      formatting,
+      showAs,
     };
   }
 
@@ -534,16 +535,18 @@ export class FieldSupplementService {
       newLookupOptions.linkFieldId === oldLookupOptions.linkFieldId &&
       newLookupOptions.foreignTableId === oldLookupOptions.foreignTableId
     ) {
-      return merge(
-        {},
-        fieldRo.options
-          ? {
-              ...oldFieldVo,
-              options: { ...oldFieldVo.options, showAs: undefined }, // clean showAs
-            }
-          : oldFieldVo,
-        fieldRo
-      );
+      return {
+        ...oldFieldVo,
+        ...fieldRo,
+        options: {
+          ...oldFieldVo.options,
+          showAs: undefined,
+        },
+        lookupOptions: {
+          ...oldLookupOptions,
+          ...newLookupOptions,
+        },
+      };
     }
 
     return this.prepareLookupField(fieldRo);
@@ -1018,11 +1021,11 @@ export class FieldSupplementService {
     }
   }
 
-  private zodParse(schema: z.Schema, value: unknown) {
+  private zodParse(name: string, schema: z.Schema, value: unknown) {
     const result = (schema as z.Schema).safeParse(value);
 
     if (!result.success) {
-      throw new BadRequestException(fromZodError(result.error));
+      throw new BadRequestException(`${name} is invalid: ${fromZodError(result.error)}`);
     }
   }
 
@@ -1034,12 +1037,12 @@ export class FieldSupplementService {
     const formatting = 'formatting' in field.options ? field.options.formatting : undefined;
 
     if (showAs) {
-      this.zodParse(showAsSchema, showAs);
+      this.zodParse('showAs', showAsSchema, showAs);
     }
 
     if (formatting) {
       const formattingSchema = getFormattingSchema(cellValueType);
-      this.zodParse(formattingSchema, formatting);
+      this.zodParse('formatting', formattingSchema, formatting);
     }
   }
 
@@ -1049,7 +1052,7 @@ export class FieldSupplementService {
     const aiConfigSchema = getAiConfigSchema(type);
 
     if (aiConfig) {
-      this.zodParse(aiConfigSchema, aiConfig);
+      this.zodParse('aiConfig', aiConfigSchema, aiConfig);
     }
   }
 
@@ -1151,7 +1154,6 @@ export class FieldSupplementService {
         dbFieldName: fieldRo.dbFieldName ?? oldFieldVo.dbFieldName,
         description:
           fieldRo.description === undefined ? oldFieldVo.description : fieldRo.description,
-        aiConfig: fieldRo.aiConfig === undefined ? oldFieldVo.aiConfig : fieldRo.aiConfig,
       }, // for convenience, we fallback name adn dbFieldName when it be undefined
       oldFieldVo
     )) as IFieldVo;
@@ -1451,8 +1453,17 @@ export class FieldSupplementService {
     const toFieldId = field.id;
 
     const graphItems = await this.referenceService.getFieldGraphItems([field.id]);
-    const fieldIds = this.getFieldReferenceIds(field);
+    let fieldIds = this.getFieldReferenceIds(field);
 
+    // add lookupOptions filter fieldIds to reference
+    if (field?.lookupOptions) {
+      const filterSetFieldIds = extractFieldIdsFromFilter(field?.lookupOptions.filter);
+      filterSetFieldIds.forEach((fieldId) => {
+        fieldIds.push(fieldId);
+      });
+    }
+
+    fieldIds = uniq(fieldIds);
     fieldIds.forEach((fromFieldId) => {
       graphItems.push({ fromFieldId, toFieldId });
     });

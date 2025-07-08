@@ -20,10 +20,13 @@ import {
   deleteBaseInvitationLink,
   EMAIL_BASE_INVITATION,
   emailBaseInvitation,
+  GET_BASE_LIST,
+  getBaseAll,
   getBaseCollaboratorList,
   getUserCollaborators,
   listBaseCollaboratorUserVoSchema,
   listBaseInvitationLink,
+  MOVE_BASE,
   PrincipalType,
   UPDATE_BASE_COLLABORATE,
   UPDATE_BASE_INVITATION_LINK,
@@ -35,7 +38,13 @@ import {
 import type { AxiosInstance } from 'axios';
 import { createNewUserAxios } from './utils/axios-instance/new-user';
 import { getError } from './utils/get-error';
-import { initApp } from './utils/init-app';
+import {
+  createBase,
+  createSpace,
+  deleteSpace,
+  initApp,
+  permanentDeleteSpace,
+} from './utils/init-app';
 
 describe('OpenAPI BaseController (e2e)', () => {
   let app: INestApplication;
@@ -408,6 +417,78 @@ describe('OpenAPI BaseController (e2e)', () => {
         });
         expect(res.status).toBe(200);
       });
+
+      it('/api/base/:baseId/move (PUT)', async () => {
+        const user1SpaceId = (
+          await userRequest.post<ICreateSpaceVo>(CREATE_SPACE, { name: 'new base' })
+        ).data.id;
+
+        const user1SpaceId2 = (
+          await userRequest.post<ICreateSpaceVo>(CREATE_SPACE, { name: 'new base2' })
+        ).data.id;
+
+        const spaceBaseList1 = (
+          await userRequest.get(urlBuilder(GET_BASE_LIST, { spaceId: user1SpaceId }))
+        ).data;
+
+        const spaceBaseList2 = (
+          await userRequest.get(urlBuilder(GET_BASE_LIST, { spaceId: user1SpaceId2 }))
+        ).data;
+
+        expect(spaceBaseList1.length).toBe(0);
+        expect(spaceBaseList2.length).toBe(0);
+
+        const newBase1 = (
+          await userRequest.post(urlBuilder(CREATE_BASE), {
+            name: 'base1',
+            spaceId: user1SpaceId,
+          })
+        ).data;
+
+        // move base
+        await userRequest.put(
+          urlBuilder(MOVE_BASE, {
+            baseId: newBase1.id,
+          }),
+          {
+            spaceId: user1SpaceId2,
+          }
+        );
+
+        const spaceBaseList1AfterMove = (
+          await userRequest.get(urlBuilder(GET_BASE_LIST, { spaceId: user1SpaceId2 }))
+        ).data;
+
+        expect(spaceBaseList1AfterMove.length).toBe(1);
+        expect(spaceBaseList1AfterMove[0].id).toBe(newBase1.id);
+      });
     });
+  });
+
+  it('/api/base/access/all (GET)', async () => {
+    const spaceId1 = await createSpace({
+      name: 'new space test base access all',
+    }).then((res) => res.id);
+    const baseId1 = await createBase({
+      name: 'new base test base access all',
+      spaceId: spaceId1,
+    }).then((res) => res.id);
+    const spaceId2 = await createSpace({
+      name: 'new space test base access all',
+    }).then((res) => res.id);
+    const baseId2 = await createBase({
+      name: 'new base test base access all',
+      spaceId: spaceId2,
+    }).then((res) => res.id);
+
+    await deleteSpace(spaceId1);
+
+    const res = await getBaseAll();
+
+    await permanentDeleteSpace(spaceId1);
+    await permanentDeleteSpace(spaceId2);
+
+    expect(res.data.find((v) => v.id === baseId1)).toBeUndefined();
+    expect(res.data.find((v) => v.id === baseId2)).toBeDefined();
   });
 });

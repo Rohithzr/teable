@@ -77,6 +77,7 @@ model TableMeta {
   pluginContextMenu PluginContextMenu[]
 
   @@index([order])
+  @@index([dbTableName])
   @@map("table_meta")
 }
 
@@ -144,6 +145,7 @@ model View {
 }
 
 model Ops {
+  id          String   @id @default(cuid())
   collection  String
   docId       String   @map("doc_id")
   docType     String   @map("doc_type")
@@ -155,17 +157,6 @@ model Ops {
   @@unique([collection, docId, version])
   @@index([collection, createdTime])
   @@map("ops")
-}
-
-model Snapshots {
-  collection String
-  docId      String @map("doc_id")
-  docType    String @map("doc_type")
-  version    Int
-  data       String
-
-  @@unique([collection, docId])
-  @@map("snapshots")
 }
 
 model Reference {
@@ -190,6 +181,7 @@ model User {
   avatar           String?
   isSystem         Boolean?  @map("is_system")
   isAdmin          Boolean?  @map("is_admin")
+  isTrialUsed      Boolean?  @map("is_trial_used")
   notifyMeta       String?   @map("notify_meta")
   lastSignTime     DateTime? @map("last_sign_time")
   deactivatedTime  DateTime? @map("deactivated_time")
@@ -321,6 +313,7 @@ model AccessToken {
   baseIds          String?   @map("base_ids")
   sign             String
   clientId         String?   @map("client_id")
+  hasFullAccess    Boolean?  @map("has_full_access")
   expiredTime      DateTime  @map("expired_time")
   lastUsedTime     DateTime? @map("last_used_time")
   createdTime      DateTime  @default(now()) @map("created_time")
@@ -330,14 +323,12 @@ model AccessToken {
 }
 
 model Setting {
-  instanceId                String    @id @default(cuid()) @map("instance_id")
-  disallowSignUp            Boolean?  @map("disallow_sign_up")
-  disallowSpaceCreation     Boolean?  @map("disallow_space_creation")
-  disallowSpaceInvitation   Boolean?  @map("disallow_space_invitation")
-  enableEmailVerification   Boolean?  @map("enable_email_verification")
-  aiConfig                  String?   @map("ai_config")
-  brandName                 String?   @map("brand_name")
-  brandLogo                 String?   @map("brand_logo")
+  name             String @unique
+  content          String?   
+  createdTime      DateTime  @default(now()) @map("created_time")
+  lastModifiedTime DateTime? @updatedAt @map("last_modified_time")
+  createdBy        String    @map("created_by")
+  lastModifiedBy   String?   @map("last_modified_by")
 
   @@map("setting")
 }
@@ -513,6 +504,7 @@ model Comment {
 }
 
 model CommentSubscription {
+  id               String     @id @default(cuid())
   tableId          String     @map("table_id")
   recordId         String     @map("record_id")
   createdBy        String     @map("created_by")
@@ -551,6 +543,7 @@ model PluginPanel {
 }
 
 model PluginContextMenu {
+  id               String    @id @default(cuid())
   tableId          String    @map("table_id")
   pluginInstallId  String    @map("plugin_install_id") @unique
   order            Float     @map("order")
@@ -571,27 +564,29 @@ model UserLastVisit {
   parentResourceId String    @map("parent_resource_id")
   lastVisitTime    DateTime  @default(now()) @map("last_visit_time")
 
-  @@unique([userId, resourceType, parentResourceId])
+  @@unique([userId, resourceType, resourceId])
+  @@index([userId, resourceType, parentResourceId])
   @@index([userId, resourceType])
   @@map("user_last_visit")
 }
 
 model Template {
-  id               String    @id @default(cuid())
-  baseId           String?    @map("base_id")
-  cover            String?
-  name             String?
-  description      String?
-  categoryId       String?   @map("category_id")
-  createdTime      DateTime  @default(now()) @map("created_time")
-  createdBy        String    @map("created_by")
-  lastModifiedTime DateTime? @updatedAt @map("last_modified_time")
-  lastModifiedBy   String?   @map("last_modified_by")
-  isSystem         Boolean?  @map("is_system")
-  isPublished      Boolean?  @map("is_published")
-  snapshot         String?   @map("snapshot")
-  order            Float     @map("order")
-  usageCount       Int       @default(0) @map("usage_count")
+  id                      String    @id @default(cuid())
+  baseId                  String?   @map("base_id")
+  cover                   String?
+  name                    String?
+  description             String?
+  markdownDescription     String?   @map("markdown_description")
+  categoryId              String?   @map("category_id")
+  createdTime             DateTime  @default(now()) @map("created_time")
+  createdBy               String    @map("created_by")
+  lastModifiedTime        DateTime? @updatedAt @map("last_modified_time")
+  lastModifiedBy          String?   @map("last_modified_by")
+  isSystem                Boolean?  @map("is_system")
+  isPublished             Boolean?  @map("is_published")
+  snapshot                String?   @map("snapshot")
+  order                   Float     @map("order")
+  usageCount              Int       @default(0) @map("usage_count")
 
   @@map("template")
 }

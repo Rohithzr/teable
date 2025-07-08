@@ -24,6 +24,7 @@ import type { IClsStore } from '../../types/cls';
 import { PermissionService } from '../auth/permission.service';
 import { BaseService } from '../base/base.service';
 import { CollaboratorService } from '../collaborator/collaborator.service';
+import { SettingService } from '../setting/setting.service';
 
 @Injectable()
 export class SpaceService {
@@ -33,6 +34,7 @@ export class SpaceService {
     private readonly baseService: BaseService,
     private readonly collaboratorService: CollaboratorService,
     private readonly permissionService: PermissionService,
+    private readonly settingService: SettingService,
     @ThresholdConfig() private readonly thresholdConfig: IThresholdConfig
   ) {}
 
@@ -83,6 +85,21 @@ export class SpaceService {
     };
   }
 
+  async filterSpaceListWithAccessToken(spaceList: { id: string; name: string }[]) {
+    const accessTokenId = this.cls.get('accessTokenId');
+    if (!accessTokenId) {
+      return spaceList;
+    }
+    const accessToken = await this.permissionService.getAccessToken(accessTokenId);
+    if (accessToken.hasFullAccess) {
+      return spaceList;
+    }
+    if (!accessToken.spaceIds?.length) {
+      return [];
+    }
+    return spaceList.filter((space) => accessToken.spaceIds.includes(space.id));
+  }
+
   async getSpaceList() {
     const userId = this.cls.get('user.id');
     const departmentIds = this.cls.get('organization.departments')?.map((d) => d.id);
@@ -118,7 +135,8 @@ export class SpaceService {
       },
       {} as Record<string, { roleName: string; resourceId: string }>
     );
-    return spaceList.map((space) => ({
+    const filteredSpaceList = await this.filterSpaceListWithAccessToken(spaceList);
+    return filteredSpaceList.map((space) => ({
       ...space,
       role: roleMap[space.id].roleName as IRole,
     }));
@@ -129,12 +147,7 @@ export class SpaceService {
     const isAdmin = this.cls.get('user.isAdmin');
 
     if (!isAdmin) {
-      const setting = await this.prismaService.setting.findFirst({
-        select: {
-          disallowSpaceCreation: true,
-        },
-      });
-
+      const setting = await this.settingService.getSetting();
       if (setting?.disallowSpaceCreation) {
         throw new ForbiddenException(
           'The current instance disallow space creation by the administrator'
@@ -220,7 +233,10 @@ export class SpaceService {
       },
     });
 
-    return baseList.map((base) => ({ ...base, role: roleMap[base.id] || roleMap[base.spaceId] }));
+    return baseList.map((base) => {
+      const role = roleMap[base.id] || roleMap[base.spaceId];
+      return { ...base, role };
+    });
   }
 
   async permanentDeleteSpace(spaceId: string) {

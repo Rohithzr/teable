@@ -148,8 +148,8 @@ export class RecordOpenApiController {
     return await this.recordOpenApiService.multipleCreateRecords(tableId, createRecordsRo);
   }
 
-  @Permissions('record|create')
-  @Post(':recordId')
+  @Permissions('record|create', 'record|read')
+  @Post(':recordId/duplicate')
   @EmitControllerEvent(Events.OPERATION_RECORDS_CREATE)
   async duplicateRecord(
     @Param('tableId') tableId: string,
@@ -186,19 +186,19 @@ export class RecordOpenApiController {
     @Query('ids') ids: string[],
     @Query('projection') projection?: { [fieldNameOrId: string]: boolean }
   ) {
-    return this.recordService.getSnapshotBulk(tableId, ids, projection);
+    return this.recordService.getSnapshotBulkWithPermission(tableId, ids, projection);
   }
 
   @Permissions('record|read')
-  @Get('/socket/doc-ids')
+  @Post('/socket/doc-ids')
   async getDocIds(
     @Param('tableId') tableId: string,
-    @Query(new ZodValidationPipe(getRecordsRoSchema), TqlPipe) query: IGetRecordsRo
+    @Body(new ZodValidationPipe(getRecordsRoSchema), TqlPipe) query: IGetRecordsRo
   ) {
     return this.recordService.getDocIdsByQuery(tableId, query);
   }
 
-  @Permissions('record|read')
+  @Permissions('table|read')
   @Get(':recordId/status')
   async getRecordStatus(
     @Param('tableId') tableId: string,
