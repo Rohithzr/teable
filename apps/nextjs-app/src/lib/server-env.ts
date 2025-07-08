@@ -13,6 +13,7 @@ export interface IServerEnv {
   storagePrefix?: string;
   edition?: string;
   passwordLoginDisabled?: boolean;
+  hideBranding?: boolean;
   // global settings
   globalSettings?: {
     disallowSignUp?: boolean;

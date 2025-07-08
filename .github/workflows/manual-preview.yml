@@ -6,7 +6,8 @@ permissions:
 
 on:
   pull_request:
-    types: 
+    branches: [f-v1.18]
+    types:
       - opened
       - synchronize
       - reopened
@@ -145,3 +146,4 @@ jobs:
             issue_number: context.payload.pull_request.number,
             body: commentBody
           });
+

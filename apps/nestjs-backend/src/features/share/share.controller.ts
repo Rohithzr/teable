@@ -59,6 +59,7 @@ import type { IShareViewInfo } from './share-auth.service';
 import { ShareAuthService } from './share-auth.service';
 import { ShareSocketService } from './share-socket.service';
 import { ShareService } from './share.service';
+import { ExportOpenApiService } from '../export/open-api/export-open-api.service';
 
 @Controller('api/share')
 @Public()
@@ -66,7 +67,8 @@ export class ShareController {
   constructor(
     private readonly shareService: ShareService,
     private readonly shareAuthService: ShareAuthService,
-    private readonly shareSocketService: ShareSocketService
+    private readonly shareSocketService: ShareSocketService,
+    private readonly exportOpenApiService: ExportOpenApiService
   ) {}
 
   @HttpCode(200)
@@ -110,6 +112,17 @@ export class ShareController {
   ): Promise<IRowCountVo> {
     const shareInfo = req.shareInfo as IShareViewInfo;
     return this.shareService.getViewRowCount(shareInfo, query);
+  }
+
+  @UseGuards(ShareAuthGuard)
+  @Get('/:shareId/export')
+  async exportCsv(
+    @Request() req: any,
+    @Query('viewId') viewId: string,
+    @Res({ passthrough: true }) res: Response
+  ) {
+    const shareInfo = req.shareInfo as IShareViewInfo;
+    return this.exportOpenApiService.exportCsvFromTable(res, shareInfo.tableId, viewId);
   }
 
   @ShareSubmit()

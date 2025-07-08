@@ -8,6 +8,7 @@ import { RecordOpenApiModule } from '../record/open-api/record-open-api.module';
 import { RecordModule } from '../record/record.module';
 import { SelectionModule } from '../selection/selection.module';
 import { ViewModule } from '../view/view.module';
+import { ExportOpenApiModule } from '../export/open-api/export-open-api.module';
 import { ShareAuthModule } from './share-auth.module';
 import { ShareSocketService } from './share-socket.service';
 import { ShareController } from './share.controller';
@@ -24,6 +25,7 @@ import { ShareService } from './share.service';
     ShareAuthModule,
     CollaboratorModule,
     ViewModule,
+    ExportOpenApiModule,
   ],
   providers: [ShareService, DbProvider, ShareSocketService],
   controllers: [ShareController],
