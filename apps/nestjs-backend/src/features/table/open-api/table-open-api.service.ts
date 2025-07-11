@@ -168,37 +168,47 @@ export class TableOpenApiService {
   }
 
   async createTable(baseId: string, tableRo: ICreateTableWithDefault): Promise<ITableFullVo> {
-    const schema = await this.prismaService.$tx(async () => {
-      const tableVo = await this.createTableMeta(baseId, tableRo);
-      const tableId = tableVo.id;
+    const schema = await this.prismaService.$tx(
+      async () => {
+        const tableVo = await this.createTableMeta(baseId, tableRo);
+        const tableId = tableVo.id;
 
-      const preparedFields = await this.prepareFields(tableId, tableRo.fields);
+        const preparedFields = await this.prepareFields(tableId, tableRo.fields);
 
-      // create teable should not set computed field isPending, because noting need to calculate when create
-      preparedFields.forEach((field) => delete field.isPending);
-      const fieldVos = await this.createFields(tableId, preparedFields);
+        // create teable should not set computed field isPending, because noting need to calculate when create
+        preparedFields.forEach((field) => delete field.isPending);
+        const fieldVos = await this.createFields(tableId, preparedFields);
 
-      const viewVos = await this.createView(tableId, tableRo.views);
+        const viewVos = await this.createView(tableId, tableRo.views);
 
-      return {
-        ...tableVo,
-        total: tableRo.records?.length || 0,
-        fields: fieldVos,
-        views: viewVos,
-        defaultViewId: viewVos[0].id,
-      };
-    });
+        return {
+          ...tableVo,
+          total: tableRo.records?.length || 0,
+          fields: fieldVos,
+          views: viewVos,
+          defaultViewId: viewVos[0].id,
+        };
+      },
+      {
+        timeout: this.thresholdConfig.bigTransactionTimeout,
+      }
+    );
 
-    const records = await this.prismaService.$tx(async () => {
-      const recordsVo =
-        tableRo.records?.length &&
-        (await this.createRecords(schema.id, {
-          records: tableRo.records,
-          fieldKeyType: tableRo.fieldKeyType ?? FieldKeyType.Name,
-        }));
+    const records = await this.prismaService.$tx(
+      async () => {
+        const recordsVo =
+          tableRo.records?.length &&
+          (await this.createRecords(schema.id, {
+            records: tableRo.records,
+            fieldKeyType: tableRo.fieldKeyType ?? FieldKeyType.Name,
+          }));
 
-      return recordsVo ? recordsVo.records : [];
-    });
+        return recordsVo ? recordsVo.records : [];
+      },
+      {
+        timeout: this.thresholdConfig.bigTransactionTimeout,
+      }
+    );
 
     return {
       ...schema,

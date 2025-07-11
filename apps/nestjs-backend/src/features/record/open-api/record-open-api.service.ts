@@ -181,7 +181,15 @@ export class RecordOpenApiService {
     fieldKeyType: FieldKeyType = FieldKeyType.Name,
     ignoreMissingFields: boolean = false
   ) {
+    // Validate input
+    if (!recordsFields || recordsFields.length === 0) {
+      return [];
+    }
+
     const fieldIdsOrNamesSet = recordsFields.reduce<Set<string>>((acc, recordFields) => {
+      if (!recordFields) {
+        return acc;
+      }
       const fieldIds = Object.keys(recordFields);
       forEach(fieldIds, (fieldId) => acc.add(fieldId));
       return acc;
@@ -218,13 +226,30 @@ export class RecordOpenApiService {
     typecast: boolean = false,
     ignoreMissingFields: boolean = false
   ): Promise<T[]> {
+    // Validate input
+    if (!records || records.length === 0) {
+      throw new BadRequestException('No records provided for validation');
+    }
+
     const recordsFields = map(records, 'fields');
+
+    // Validate that all records have fields property
+    for (let i = 0; i < records.length; i++) {
+      if (!records[i]?.fields) {
+        throw new BadRequestException(`Record at index ${i} is missing fields property`);
+      }
+    }
     const effectFieldInstance = await this.getEffectFieldInstances(
       tableId,
       recordsFields,
       fieldKeyType,
       ignoreMissingFields
     );
+
+    // If no effect fields found, return original records to preserve fields
+    if (effectFieldInstance.length === 0) {
+      return records;
+    }
 
     const newRecordsFields: Record<string, unknown>[] = recordsFields.map(() => ({}));
     for (const field of effectFieldInstance) {
@@ -274,6 +299,22 @@ export class RecordOpenApiService {
     windowId?: string
   ) {
     const { records, order, fieldKeyType = FieldKeyType.Name, typecast } = updateRecordsRo;
+
+    // Validate input
+    if (!records || records.length === 0) {
+      throw new BadRequestException('No records provided for update');
+    }
+
+    // Validate each record has required properties
+    for (let i = 0; i < records.length; i++) {
+      const record = records[i];
+      if (!record || !record.id) {
+        throw new BadRequestException(`Record at index ${i} is missing required properties`);
+      }
+      if (!record.fields) {
+        throw new BadRequestException(`Record ${record.id} is missing fields property`);
+      }
+    }
     const orderIndexesBefore =
       order != null && windowId
         ? await this.recordService.getRecordIndexes(
@@ -316,6 +357,9 @@ export class RecordOpenApiService {
     });
 
     const recordIds = records.map((r) => r.id);
+    // Capture field IDs before the transaction to avoid issues with records being modified
+    const fieldIds = records.length > 0 && records[0]?.fields ? Object.keys(records[0].fields) : [];
+
     if (windowId) {
       const orderIndexesAfter =
         order && (await this.recordService.getRecordIndexes(tableId, recordIds, order.viewId));
@@ -325,7 +369,7 @@ export class RecordOpenApiService {
         windowId,
         userId: this.cls.get('user.id'),
         recordIds,
-        fieldIds: Object.keys(records[0]?.fields || {}),
+        fieldIds,
         cellContexts,
         orderIndexesBefore,
         orderIndexesAfter,
@@ -399,12 +443,28 @@ export class RecordOpenApiService {
 
   async deleteRecord(tableId: string, recordId: string, windowId?: string) {
     const data = await this.deleteRecords(tableId, [recordId], windowId);
+    if (!data.records || data.records.length === 0) {
+      throw new Error('Failed to delete record');
+    }
     return data.records[0];
   }
 
   async deleteRecords(tableId: string, recordIds: string[], windowId?: string) {
+    // Validate input
+    if (!recordIds || recordIds.length === 0) {
+      throw new BadRequestException('No record IDs provided for deletion');
+    }
+
     const { records, orders } = await this.prismaService.$tx(async () => {
       const records = await this.recordService.getRecordsById(tableId, recordIds, false);
+
+      // Validate that all records exist
+      if (records.records.length !== recordIds.length) {
+        const foundRecordIds = records.records.map((r) => r.id);
+        const missingRecordIds = recordIds.filter((id) => !foundRecordIds.includes(id));
+        throw new NotFoundException(`Records not found: ${missingRecordIds.join(', ')}`);
+      }
+
       await this.recordCalculateService.calculateDeletedRecord(tableId, records.records);
       const orders = windowId
         ? await this.recordService.getRecordIndexes(tableId, recordIds)
@@ -568,6 +628,9 @@ export class RecordOpenApiService {
     }
 
     const recordData = await this.recordService.getRecordsById(tableId, [recordId]);
+    if (!recordData.records || recordData.records.length === 0) {
+      throw new NotFoundException(`Record ${recordId} not found`);
+    }
     const record = recordData.records[0];
     if (!record) {
       throw new NotFoundException(`Record ${recordId} not found`);
@@ -622,6 +685,9 @@ export class RecordOpenApiService {
     return await this.prismaService
       .$tx(async () => this.createRecords(tableId, createRecordsRo))
       .then((res) => {
+        if (!res.records || res.records.length === 0) {
+          throw new Error('Failed to duplicate record');
+        }
         return res.records[0];
       });
   }

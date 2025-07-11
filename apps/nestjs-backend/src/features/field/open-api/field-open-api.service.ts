@@ -179,29 +179,34 @@ export class FieldOpenApiService {
     tableId: string,
     fields: (IFieldVo & { columnMeta?: IColumnMeta; references?: string[] })[]
   ) {
-    const newFields = await this.prismaService.$tx(async () => {
-      const newFields: { tableId: string; field: IFieldInstance }[] = [];
-      for (let i = 0; i < fields.length; i++) {
-        const field = fields[i];
-        const { columnMeta, references, ...fieldVo } = field;
+    const newFields = await this.prismaService.$tx(
+      async () => {
+        const newFields: { tableId: string; field: IFieldInstance }[] = [];
+        for (let i = 0; i < fields.length; i++) {
+          const field = fields[i];
+          const { columnMeta, references, ...fieldVo } = field;
 
-        const fieldInstance = createFieldInstanceByVo(fieldVo);
+          const fieldInstance = createFieldInstanceByVo(fieldVo);
 
-        const createResult = await this.fieldCreatingService.alterCreateField(
-          tableId,
-          fieldInstance,
-          columnMeta
-        );
+          const createResult = await this.fieldCreatingService.alterCreateField(
+            tableId,
+            fieldInstance,
+            columnMeta
+          );
 
-        if (references) {
-          await this.restoreReference(references);
+          if (references) {
+            await this.restoreReference(references);
+          }
+
+          newFields.push(...createResult);
         }
 
-        newFields.push(...createResult);
+        return newFields;
+      },
+      {
+        timeout: this.thresholdConfig.bigTransactionTimeout,
       }
-
-      return newFields;
-    });
+    );
 
     await this.prismaService.$tx(
       async () => {
@@ -236,9 +241,14 @@ export class FieldOpenApiService {
     const columnMeta = fieldRo.order && {
       [fieldRo.order.viewId]: { order: fieldRo.order.orderIndex },
     };
-    const newFields = await this.prismaService.$tx(async () => {
-      return await this.fieldCreatingService.alterCreateField(tableId, fieldInstance, columnMeta);
-    });
+    const newFields = await this.prismaService.$tx(
+      async () => {
+        return await this.fieldCreatingService.alterCreateField(tableId, fieldInstance, columnMeta);
+      },
+      {
+        timeout: this.thresholdConfig.bigTransactionTimeout,
+      }
+    );
 
     await this.prismaService.$tx(
       async () => {
@@ -299,15 +309,20 @@ export class FieldOpenApiService {
     const columnsMeta = await this.viewService.getColumnsMetaMap(tableId, fieldIds);
     const referenceMap = await this.getFieldReferenceMap(fieldIds);
 
-    await this.prismaService.$tx(async () => {
-      await this.fieldViewSyncService.deleteDependenciesByFieldIds(
-        tableId,
-        fields.map((f) => f.id)
-      );
-      for (const field of fields) {
-        await this.fieldDeletingService.alterDeleteField(tableId, field);
+    await this.prismaService.$tx(
+      async () => {
+        await this.fieldViewSyncService.deleteDependenciesByFieldIds(
+          tableId,
+          fields.map((f) => f.id)
+        );
+        for (const field of fields) {
+          await this.fieldDeletingService.alterDeleteField(tableId, field);
+        }
+      },
+      {
+        timeout: this.thresholdConfig.bigTransactionTimeout,
       }
-    });
+    );
 
     this.eventEmitterService.emitAsync(Events.OPERATION_FIELDS_DELETE, {
       operationId: generateOperationId(),

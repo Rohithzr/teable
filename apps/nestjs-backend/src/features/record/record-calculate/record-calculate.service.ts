@@ -51,9 +51,16 @@ export class RecordCalculateService {
     records: { id: string; fields: { [fieldNameOrId: string]: unknown } }[],
     isNewRecord?: boolean
   ) {
+    // Validate input
+    if (!records || records.length === 0) {
+      return [];
+    }
+
     const fieldKeys = Array.from(
       records.reduce<Set<string>>((acc, record) => {
-        Object.keys(record.fields).forEach((fieldNameOrId) => acc.add(fieldNameOrId));
+        if (record?.fields) {
+          Object.keys(record.fields).forEach((fieldNameOrId) => acc.add(fieldNameOrId));
+        }
         return acc;
       }, new Set())
     );
@@ -75,15 +82,28 @@ export class RecordCalculateService {
         )
       ).map((s) => s.data);
       oldRecordsMap = keyBy(oldRecords, 'id');
+
+      // Validate that all records exist
+      const missingRecordIds = records.map((r) => r.id).filter((id) => !oldRecordsMap[id]);
+
+      if (missingRecordIds.length > 0) {
+        throw new NotFoundException(`Records not found: ${missingRecordIds.join(', ')}`);
+      }
     }
 
     for (const record of records) {
+      // Validate record has required properties
+      if (!record || !record.id || !record.fields) {
+        continue;
+      }
+
       Object.entries(record.fields).forEach(([fieldNameOrId, value]) => {
         if (!fieldIdMap[fieldNameOrId]) {
           throw new NotFoundException(`Field ${fieldNameOrId} not found`);
         }
         const fieldId = fieldIdMap[fieldNameOrId].id;
-        const oldCellValue = isNewRecord ? null : oldRecordsMap[record.id].fields[fieldId];
+        const oldRecord = oldRecordsMap[record.id];
+        const oldCellValue = isNewRecord ? null : oldRecord?.fields?.[fieldId] ?? null;
         cellContexts.push({
           recordId: record.id,
           fieldId,
