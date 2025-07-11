@@ -75,12 +75,19 @@ export class RecordCalculateService {
 
     let oldRecordsMap: Record<string, IRecord> = {};
     if (!isNewRecord) {
-      const oldRecords = (
-        await this.recordService.getSnapshotBulk(
-          tableId,
-          records.map((r) => r.id)
-        )
-      ).map((s) => s.data);
+      const snapshotResult = await this.recordService.getSnapshotBulk(
+        tableId,
+        records.map((r) => r.id)
+      );
+
+      // Log for debugging
+      console.log(`[DEBUG] getSnapshotBulk result:`, {
+        requestedIds: records.map((r) => r.id),
+        returnedCount: snapshotResult.length,
+        returnedIds: snapshotResult.map((s) => s.data?.id),
+      });
+
+      const oldRecords = snapshotResult.map((s) => s.data);
       oldRecordsMap = keyBy(oldRecords, 'id');
 
       // Validate that all records exist
@@ -88,6 +95,13 @@ export class RecordCalculateService {
 
       if (missingRecordIds.length > 0) {
         throw new NotFoundException(`Records not found: ${missingRecordIds.join(', ')}`);
+      }
+
+      // Additional safety check - ensure all records have the expected structure
+      for (const record of records) {
+        if (!oldRecordsMap[record.id] || !oldRecordsMap[record.id].fields) {
+          throw new NotFoundException(`Record ${record.id} not found or has invalid structure`);
+        }
       }
     }
 
@@ -102,8 +116,16 @@ export class RecordCalculateService {
           throw new NotFoundException(`Field ${fieldNameOrId} not found`);
         }
         const fieldId = fieldIdMap[fieldNameOrId].id;
-        const oldRecord = oldRecordsMap[record.id];
-        const oldCellValue = isNewRecord ? null : oldRecord?.fields?.[fieldId] ?? null;
+
+        // Extra defensive programming - ensure we never access undefined properties
+        let oldCellValue = null;
+        if (!isNewRecord) {
+          const oldRecord = oldRecordsMap[record.id];
+          if (oldRecord && oldRecord.fields && typeof oldRecord.fields === 'object') {
+            oldCellValue = oldRecord.fields[fieldId] ?? null;
+          }
+        }
+
         cellContexts.push({
           recordId: record.id,
           fieldId,
